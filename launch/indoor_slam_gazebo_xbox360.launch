@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+
+<launch>
+   
+  <!-- Start Gazebo with wg world running in (max) realtime -->
+  <include file="$(find hector_gazebo_worlds)/launch/willow_garage.launch"/>
+   
+  <!-- Spawn simulated quadrotor uav -->
+  <include file="$(find hector_quadrotor_gazebo)/launch/spawn_quadrotor.launch" >
+    <arg name="model" value="$(find hector_quadrotor_description)/urdf/quadrotor_hokuyo_utm30lx.gazebo.xacro"/> 
+  </include>
+  
+  <!-- Start SLAM system
+  <include file="$(find hector_mapping)/launch/mapping_default.launch">
+    <arg name="odom_frame" value="world"/>
+  </include> -->
+ 
+  <!-- Start GeoTIFF mapper
+  <include file="$(find hector_geotiff)/launch/geotiff_mapper.launch">
+    <arg name="trajectory_publish_rate" value="4"/> 
+  </include> -->
+  
+  <group ns="slam">
+    <node pkg="ndt_gslam" type="graph_slam2d" name="graph_slam2d" respawn="true" output="screen">
+      <!-- <param name="tf_prefix" value="p3dx_0"/> -->
+      <param name="robot_base_frame_id" value="base_footprint"/>
+      <!-- incomming odometry  tf frame_id without tf_prefix -->
+      <param name="odom_farme_id" value="nav"/>
+      <!-- calculated map frame_id name -->
+      <param name="map_farme_id" value="map"/>
+
+      <!-- <remap from="/scan" to="/base_scan" /> -->
+      <!-- ODOM, POSE, default:NON -->
+      <param name="subscribe_mode" value="NON"/>
+
+       <param name="scanmatch_window_radius" type="double" value="30.0"/>
+       <param name="node_gen_distance" type="double" value="2.0"/>
+       <param name="loop_max_distance" type="double" value="20.0"/>
+       <param name="loop_min_distance" type="double" value="20.0"/>
+       <param name="loop_score_threshold" type="double" value="0.6"/>
+
+       <param name="serialize_graph" type="bool" value="true"/>
+    </node>
+  </group>
+
+
+  <!-- Start rviz visualization with preset config -->
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find hector_quadrotor_demo)/rviz_cfg/indoor_slam.rviz"/>
+ 
+<!-- Launch modified joy teleop from bebop_tools -->
+  <include file="$(find testing)/launch/joy_teleop_sim.launch"/>
+  
+  <!-- Start opencv node using FAST corner detector on image from camera -->
+  <node pkg="image_processing" type="corner_detector" name="corner_detector" />
+
+</launch>

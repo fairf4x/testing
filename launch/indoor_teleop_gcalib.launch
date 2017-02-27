@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<!--
+    run monocular calibration with bebop drone
+    note cmd line arguments:
+    drone .. type of drone used bebop1/bebop2
+    boardSize .. size of calibration chessboard
+    squareSize .. size of calibration chessboard square in m
+-->
+<launch>
+    <arg name="drone" default="bebop1" />
+    <arg name="boardSize" default="8x6" />
+    <arg name="squareSize" default="0.035" />
+
+    <arg name="namespace" default="bebop" />
+    <arg name="ip" default="192.168.42.1" />
+    <!-- hull protection: 1 = installed, 0 = not installed -->
+    <arg name="hull" default="1" />
+    <!-- speed settings: 1 = indoor flight, 0 = outdoor flight -->
+    <arg name="outdoorSpeed" default="1" />
+
+    <arg name="config_file" default="$(find bebop_driver)/config/defaults.yaml" />
+    <arg name="camera_info_url" default="package://bebop_driver/data/$(arg drone)_camera_calib.yaml" />
+    <group ns="$(arg namespace)">
+        <node pkg="bebop_driver" name="bebop_driver" type="bebop_driver_node" output="screen">
+           <!-- <param name="camera_info_url" value="$(arg camera_info_url)" /> -->
+            <param name="bebop_ip" value="$(arg ip)" />
+	    <param name="sync_time" value="true" />
+            <param name="SpeedSettingsHullProtectionPresent" value="$(arg hull)" />
+            <param name="SpeedSettingsOutdoorOutdoor" value="$(arg outdoorSpeed)" />
+            <rosparam command="load" file="$(arg config_file)" />
+        </node>
+        <include file="$(find bebop_description)/launch/description.launch" />
+    </group>
+
+<!-- rviz display bebop -->
+  <arg name="model" default="$(find bebop_description)/urdf/bebop_base.urdf.xacro"/>
+  <arg name="gui" default="False" />
+  <param name="robot_description" command="$(find xacro)/xacro.py $(arg model)" />
+  <param name="use_gui" value="$(arg gui)"/>
+  <arg name="rvizconfig" default="$(find testing)/rviz_cfg/indoor_teleop.rviz" />
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />
+
+<!-- geometric calibration -->
+<!-- 
+ <node name="camera_calibration" pkg="camera_calibration" type="cameracalibrator.py" args="--size=7x5 --square=0.03 image:=/bebop/image_raw camera:=/bebop" />
+Running node does not work - probably wrong timing.
+
+equivalent cmd line runs OK:
+
+rosrun camera_calibration cameracalibrator.py --size=7x5 --square=0.03 image:=/bebop/image_raw camera:=/bebop
+-->
+
+</launch>
