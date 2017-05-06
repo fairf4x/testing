@@ -4,11 +4,15 @@ project(testing)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
+find_package(catkin REQUIRED COMPONENTS 
+	nav_msgs
+	std_msgs
+	roscpp
+	rospy)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -176,6 +180,16 @@ catkin_package(
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
+
+include_directories(${catkin_INCLUDE_DIRS})
+
+add_executable(frodopathy src/frodopath.cpp)
+add_executable(ultimetry src/ultimetry.cpp)
+target_link_libraries(frodopathy ${catkin_LIBRARIES})
+target_link_libraries(ultimetry ${catkin_LIBRARIES})
+add_dependencies(frodopathy frodopathy_gencpp)
+add_dependencies(ultimetry ultimetry_gencpp)
+
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)

@@ -15,10 +15,23 @@ roslaunch testing view_rosbag.launch bag:=<full path to bagfile>
 <node pkg="rosbag" type="play" name="rosbag_play"
        args="--pause $(arg bag)" output="screen"/>
 
-<!-- run image_view to see images from the bag -->
-<node pkg="image_view" type="image_view" name="imview" args="image:=/bebop/image_raw" /> 
+<node pkg="testing" type="frodopathy" name="frodopathy"
+	args="/bebop/odom /bebop/frodopathy"/>
 
-<arg name="cmd_vel" default="/bebop/odom" />
- <node name="rqt_plot" pkg="rqt_plot" type="rqt_plot" args="$(arg cmd_vel)" />
+<node pkg="testing" type="frodopathy" name="frodopathy_dso"
+	args="/dso_odom_topic /dso/frodopathy"/>
+<!--<arg name="cmd_vel" default="/bebop/odom" />
+ <node name="rqt_plot" pkg="rqt_plot" type="rqt_plot" args="$(arg cmd_vel)" /> -->
+
+  <arg name="model" default="$(find bebop_description)/urdf/bebop_base.urdf.xacro"/>
+  <arg name="gui" default="False" />
+  <param name="robot_description" command="$(find xacro)/xacro.py $(arg model)" />
+  <param name="use_gui" value="$(arg gui)"/>
+
+<arg name="rvizconfig" default="$(find testing)/rviz_cfg/indoor_teleop_rosbag.rviz" />
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />
+
+<node pkg="dso_ros" type="dso_live" name="dso"
+	args="image:=/bebop/image_raw calib=/home/harasim/catkin_ws/runtime/calibration_recordings/calibration/camera.txt"/>
        
 </launch>
