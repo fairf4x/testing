@@ -1,0 +1,71 @@
+<?xml version="1.0"?>
+<!--
+    Launch teleoperated drone flight.
+    Run DSO.
+
+    cmd line parameters:
+    drone .. bebop1/bebop2 
+-->
+<launch>
+
+    <arg name="drone" default="bebop2" />
+        
+    <arg name="namespace" default="bebop" />
+    <arg name="ip" default="192.168.42.1" />
+    <!-- hull protection: 1 = installed, 0 = not installed -->
+    <arg name="hull" default="0" />
+    <!-- speed settings: 1 = indoor flight, 0 = outdoor flight -->
+    <arg name="outdoorSpeed" default="1" />
+
+    <arg name="config_file" default="$(find bebop_driver)/config/defaults.yaml" />
+    <arg name="camera_info_url" default="package://bebop_driver/data/$(arg drone)_camera_calib.yaml" />
+    <group ns="$(arg namespace)">
+        <node pkg="bebop_driver" name="bebop_driver" type="bebop_driver_node" output="screen">
+            <param name="camera_info_url" value="$(arg camera_info_url)" />
+            <param name="bebop_ip" value="$(arg ip)" />
+	    <param name="sync_time" value="true" />
+            <param name="SpeedSettingsHullProtectionPresent" value="$(arg hull)" />
+            <param name="SpeedSettingsOutdoorOutdoor" value="$(arg outdoorSpeed)" />
+            <rosparam command="load" file="$(arg config_file)" />
+        </node>
+        <include file="$(find bebop_description)/launch/description.launch" />
+    </group>
+
+<!-- set video stabilization mode (dynamic parameter)
+    0: Video flat on roll and pitch
+    1: Video flat on pitch only
+    2: Video flat on roll only
+    3: Video follows drone angles
+-->
+    <node name="$(anon dynparam)" pkg="dynamic_reconfigure" type="dynparam" args="set_from_parameters /bebop/bebop_driver">
+       <param name="PictureSettingsVideoStabilizationModeMode" type="int" value="3" />
+    </node>
+
+    <include file="$(find testing)/launch/joy_teleop_real.launch" />
+
+<!-- rviz display bebop -->
+  <arg name="model" default="$(find bebop_description)/urdf/bebop_base.urdf.xacro"/>
+  <arg name="gui" default="False" />
+  <param name="robot_description" command="$(find xacro)/xacro.py $(arg model)" />
+  <param name="use_gui" value="$(arg gui)"/>
+<!--  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" /> -->
+  <arg name="rvizconfig" default="$(find testing)/rviz_cfg/indoor_teleop.rviz" />
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />
+
+<!-- plot battery status -->
+ <arg name="batteryPerc" default="/bebop/states/common/CommonState/BatteryStateChanged" />
+ <node name="rqt_plot" pkg="rqt_plot" type="rqt_plot" args="$(arg batteryPerc)" /> 
+
+<!-- robot localization -->
+    
+ <param name="dso_frame_id" type="string" value="dso_odom" />
+ <param name="camera_frame_id" type="string" value="camera_optical" />
+ <param name="odom_frame_id" type="string" value="odom" />
+ <param name="base_frame_id" type="string" value="base_link" />
+
+ <node pkg="dso_ros" type="dso_live" args="calib=$(find testing)/config/$(arg drone)_cam.txt" name="dso_ros" output="screen">
+     <remap from="image" to="/bebop/image_raw"/>
+ </node>
+
+</launch>

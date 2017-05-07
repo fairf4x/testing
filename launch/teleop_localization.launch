@@ -1,12 +1,13 @@
 <?xml version="1.0"?>
 <!--
     Launch teleoperated drone flight.
+    Use combined localization.
     cmd line parameters:
     drone .. bebop1/bebop2 
 -->
 <launch>
 
-    <arg name="drone" default="bebop1" />
+    <arg name="drone" default="bebop2" />
         
     <arg name="namespace" default="bebop" />
     <arg name="ip" default="192.168.42.1" />
@@ -54,4 +55,22 @@
 <!-- plot battery status -->
  <arg name="batteryPerc" default="/bebop/states/common/CommonState/BatteryStateChanged" />
  <node name="rqt_plot" pkg="rqt_plot" type="rqt_plot" args="$(arg batteryPerc)" /> 
+
+<!-- robot localization -->
+
+ <group ns="dso"> 
+    	<node pkg="robot_localization" type="ekf_localization_node" name="ekf_se" clear_params="true">
+        	<rosparam command="load" file="$(find testing)/params/ekf_robot_localization.yaml"/>
+    	</node>
+    
+	<param name="dso_frame_id" type="string" value="dso_odom" />
+  	<param name="camera_frame_id" type="string" value="camera_optical" />
+  	<param name="odom_frame_id" type="string" value="odom" />
+  	<param name="base_frame_id" type="string" value="base_link" />
+
+    	<node pkg="dso_ros" type="dso_live" args="calib=$(find testing)/config/$(arg drone)_cam.txt" name="dso_ros" output="screen">
+        	<remap from="image" to="/bebop/image_raw"/>
+    	</node>
+ </group> 
+
 </launch>
