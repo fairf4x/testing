@@ -20,6 +20,12 @@ roslaunch testing view_rosbag.launch bag:=<full path to bagfile>
 
 <node pkg="testing" type="frodopathy" name="frodopathy_dso"
 	args="/dso_odom_topic /dso/frodopathy"/>
+
+<node pkg="testing" type="frodopathy" name="frodopathy_ultimetry"
+	args="/ultimetry /ultimetry/frodopathy"/>
+
+<node pkg="testing" type="ultimetry" name="ultimetry"/>
+
 <!--<arg name="cmd_vel" default="/bebop/odom" />
  <node name="rqt_plot" pkg="rqt_plot" type="rqt_plot" args="$(arg cmd_vel)" /> -->
 

@@ -63,16 +63,6 @@ Visualization Manager:
       Transport Hint: raw
       Unreliable: false
       Value: true
-    - Angle Tolerance: 0.100000001
-      Class: rviz/Odometry
-      Color: 0; 255; 127
-      Enabled: true
-      Keep: 0
-      Length: 0.5
-      Name: Odometry
-      Position Tolerance: 0.100000001
-      Topic: /bebop/odom
-      Value: true
     - Class: rviz/Path
       Color: 255; 0; 0
       Enabled: true
@@ -81,10 +71,17 @@ Visualization Manager:
       Value: true
       Style: lines
     - Class: rviz/Path
-      Color: 0; 255; 0
+      Color: 0; 200; 200
       Enabled: true
       Name: Path
       Topic: /dso/frodopathy
+      Value: true
+      Style: lines
+    - Class: rviz/Path
+      Color: 0; 255; 0
+      Enabled: true
+      Name: Path
+      Topic: /ultimetry/frodopathy
       Value: true
       Style: lines
     - Alpha: 1
