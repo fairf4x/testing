@@ -4,6 +4,7 @@
 #include "std_msgs/String.h"
 #include "geometry_msgs/Twist.h"
 #include <string>
+#include <cmath>
 
 class OdometrySubscriber
 {
@@ -16,16 +17,13 @@ class OdometrySubscriber
 	newOdometry.pose = odom->pose;
 	newOdometry.twist = odom->twist;
 	
-	count++;
 	hasNew = true;
-
 	odometry = newOdometry;
     }
 
     OdometrySubscriber()
     {
 	hasNew = false;
-	count = 0;
     }
 
     bool HasNewMessage()
@@ -33,15 +31,9 @@ class OdometrySubscriber
 	return hasNew;
     }
 
-    int GetCount()
-    {
-	return count;
-    }
-
     nav_msgs::Odometry GetNewest()
     {
 	hasNew = false;
-	count = 0;
 	return odometry;
     }
 
@@ -53,7 +45,6 @@ class OdometrySubscriber
     private:
     ros::Subscriber subscriber;
     nav_msgs::Odometry odometry;
-    int count;
     bool hasNew;
 };
 
@@ -70,6 +61,47 @@ class Ultimetry
 	newMessage.linear = cmd->linear;
 	newMessage.angular = cmd->angular;
 	joyMessage = newMessage;
+
+	resolveRotation(std::abs(cmd->angular.z));
+    }
+
+    void resolveRotation(float valueZ)
+    {
+	float valueLimit = 0.1;
+	int consecutiveLimit = 3;
+	
+	if (rotatingCommandActive)
+	{
+	    if (valueZ < valueLimit)
+	    {
+		if(++rotationCommandCount == consecutiveLimit)
+		{
+		    rotatingCommandActive = false;
+		    rotationCommandCount = 0;
+		}
+	    }
+	    else
+	    {
+		rotationCommandCount = 0;
+	    }
+	}
+	else
+	{
+	    if (valueZ > valueLimit)
+	    {
+		if(++rotationCommandCount == consecutiveLimit)
+		{
+		    rotatingCommandActive = true;
+		    rotationCommandCount = 0;
+		}
+	    }
+	    else
+	    {
+		rotationCommandCount = 0;
+	    }
+	}
+	
+	lastAngularZ = valueZ;
     }
 
     void initPublisherAndSubscribers(ros::NodeHandle n)
@@ -94,28 +126,91 @@ class Ultimetry
         newMessage = false;
 	count = 0;
 	messageTopicName = "/ultimetry/message";
+
+	rotatingCommandActive = false;
+	rotationCommandCount = 0;
+	lastAngularZ = 0;
+
+	dsoSumSinceLastTime.linear.x = 0;
+	dsoSumSinceLastTime.linear.y = 0;
+        dsoSumSinceLastTime.linear.z = 0;
+
+        droneCumulative.linear.x = 0;
+	droneCumulative.linear.y = 0;
+	droneCumulative.linear.z = 0;
+
+	droneLastPosition.position.x = 0;
+	droneLastPosition.position.y = 0;
+	droneLastPosition.position.z = 0;
     }
 
     void publishIfNew()
     {
+	std_msgs::String message;
+	if (dsoOdometrySubscriber.HasNewMessage())
+	{
+	    std::ostringstream stringStream;
+    	    nav_msgs::Odometry dsoOdom = dsoOdometrySubscriber.GetNewest();
+
+	    dsoSumSinceLastTime.linear.x += dsoOdom.twist.twist.linear.x;
+	    dsoSumSinceLastTime.linear.y += dsoOdom.twist.twist.linear.y;
+	    dsoSumSinceLastTime.linear.z += dsoOdom.twist.twist.linear.z;
+
+	    message.data = stringStream.str();
+            ultimetryMessagePublisher.publish(message);
+	}
+
 	if (droneOdometrySubscriber.HasNewMessage())
 	{
-	    int droneOdomCount = droneOdometrySubscriber.GetCount();
-	    int dsoOdomCount = dsoOdometrySubscriber.GetCount();
-
 	    nav_msgs::Odometry droneOdom = droneOdometrySubscriber.GetNewest();
-	    dsoOdometrySubscriber.GetNewest();
+	    
+	    if(!rotatingCommandActive && !droneLastPositionStarting())
+	    {
+		geometry_msgs::Twist dronePositionDifference;
+		dronePositionDifference.linear.x = droneOdom.pose.pose.position.x - droneLastPosition.position.x - droneCumulative.linear.x;
+		dronePositionDifference.linear.y = droneOdom.pose.pose.position.y - droneLastPosition.position.y - droneCumulative.linear.y;
+		dronePositionDifference.linear.z = droneOdom.pose.pose.position.z - droneLastPosition.position.z - droneCumulative.linear.z;
+		
+		double length = countVectorLength(dronePositionDifference.linear);
+		if (length > 0.1)
+		{
+		    droneCumulative.linear.x += dronePositionDifference.linear.x * 0.1;
+		    droneCumulative.linear.y += dronePositionDifference.linear.y * 0.1;
+		    droneCumulative.linear.z += dronePositionDifference.linear.z * 0.1;
+		}
+		else if (length > 0.08)
+		{
+		    droneCumulative.linear.x += dronePositionDifference.linear.x * 0.05;
+		    droneCumulative.linear.y += dronePositionDifference.linear.y * 0.05;
+		    droneCumulative.linear.z += dronePositionDifference.linear.z * 0.05;
+		}
+/*		std::ostringstream stringStream;
+		stringStream << "Dso: " << dsoSumSinceLastTime.linear.x << " " << dsoSumSinceLastTime.linear.y << " " << dsoSumSinceLastTime.linear.z 			<< "\nDso vector length: " << countVectorLength(dsoSumSinceLastTime.linear) 
+		<< "\nDrone: " << droneOdom.twist.twist.linear.x << " " << droneOdom.twist.twist.linear.y << " " << droneOdom.twist.twist.linear.z    			<< "\nDrone difference: " << droneOdom.twist.twist.linear.x - droneLastTime.linear.x << " " 
+<< droneOdom.twist.twist.linear.y - droneLastTime.linear.y << " " << droneOdom.twist.twist.linear.z - droneLastTime.linear.z 
+		<< "\nDrone position: " << droneOdom.pose.pose.position.x << " " << droneOdom.pose.pose.position.y << " " << droneOdom.pose.pose.position.z
+		<< "\nDrone position difference: " << dronePositionDifference.linear.x << " " << dronePositionDifference.linear.y << " " << dronePositionDifference.linear.z
+		<< "\nDrone vector length: " << countVectorLength(dronePositionDifference.linear);
+		message.data = stringStream.str();
 
-	    std::ostringstream stringStream;
-	    stringStream << "Drone odometry has " << droneOdomCount << " messages, dso odometry has " << dsoOdomCount << " messages and  commands have " << count << " messages. \n Cmd: " << joyMessage.angular.z;
-	    std_msgs::String message;
-	    message.data = stringStream.str();
+	        ultimetryMessagePublisher.publish(message); */
+	    }
 
-	    droneOdom.pose.pose.position.x = droneOdom.pose.pose.position.x + 0.3;
+	    droneOdom.pose.pose.position.x = droneOdom.pose.pose.position.x - droneCumulative.linear.x; 
+	    droneOdom.pose.pose.position.y = droneOdom.pose.pose.position.y - droneCumulative.linear.y;
+	    droneOdom.pose.pose.position.z = droneOdom.pose.pose.position.z - droneCumulative.linear.z;
+
 	    ultimetryPublisher.publish(droneOdom);
-	    ultimetryMessagePublisher.publish(message);
+
 	    newMessage = false;
 	    count = 0;
+
+	    dsoSumSinceLastTime.linear.x = 0;
+	    dsoSumSinceLastTime.linear.y = 0;
+	    dsoSumSinceLastTime.linear.z = 0;
+
+//	    droneLastTime.linear = droneOdom.twist.twist.linear;
+	    droneLastPosition.position = droneOdom.pose.pose.position;
 	}
     }
 
@@ -126,11 +221,38 @@ class Ultimetry
     OdometrySubscriber dsoOdometrySubscriber;
     ros::Subscriber droneCommandSubscriber;
     geometry_msgs::Twist joyMessage;
+    geometry_msgs::Twist dsoSumSinceLastTime;    
+    geometry_msgs::Twist droneCumulative;
+    geometry_msgs::Pose droneLastPosition;
 
     bool newMessage;
     int count;
     nav_msgs::Odometry odometry;
     std::string messageTopicName;
+
+    bool rotatingCommandActive;
+    int rotationCommandCount;
+    float lastAngularZ;
+
+    bool droneLastPositionStarting()
+    {
+	if (droneLastPosition.position.x != 0)
+	    return false;
+	
+	if (droneLastPosition.position.y != 0)
+	    return false;
+
+	if (droneLastPosition.position.z != 0)
+	    return false;	
+
+	return true;
+    }
+
+    double countVectorLength(geometry_msgs::Vector3 v)
+    {
+	double base = v.x*v.x + v.y*v.y + v.z*v.z;
+	return sqrt(base);
+    }
 
     void initSubscriber(ros::NodeHandle n, std::string droneCommandTopicName)
     {
