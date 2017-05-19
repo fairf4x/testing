@@ -7,6 +7,7 @@ find_package(catkin REQUIRED COMPONENTS
 	geometry_msgs
 	roscpp
 	rospy
+	tf
 	message_generation)
 
 find_package(Eigen3 REQUIRED)
@@ -15,7 +16,7 @@ add_service_files(DIRECTORY srv
     FILES
     GetEigenValue.srv
     ComputeTransformationMatrix.srv
-    NOINSTALL
+#    NOINSTALL
     )
 
   generate_messages(DEPENDENCIES std_msgs geometry_msgs)

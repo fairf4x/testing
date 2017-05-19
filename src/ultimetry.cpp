@@ -1,8 +1,10 @@
 #include "ros/ros.h"
 #include "nav_msgs/Odometry.h"
+#include "testing/ComputeTransformationMatrix.h"
 #include "nav_msgs/Path.h"
 #include "std_msgs/String.h"
 #include "geometry_msgs/Twist.h"
+#include "tf/transform_broadcaster.h"
 #include <string>
 #include <cmath>
 
@@ -53,7 +55,7 @@ class Ultimetry
     public:
     void droneCommandCallback(const geometry_msgs::Twist::ConstPtr& cmd)
     { 
-	ROS_INFO("I heard command.");
+	//ROS_INFO("I heard command.");
 	count++;
 	newMessage = true;
 	geometry_msgs::Twist newMessage;
@@ -106,6 +108,8 @@ class Ultimetry
 
     void initPublisherAndSubscribers(ros::NodeHandle n)
     {
+	init(n);
+
 	droneOdometrySubscriber.initSubscriber(n, "/bebop/odom");
 	dsoOdometrySubscriber.initSubscriber(n, "/dso_odom_topic");
 	initSubscriber(n, "/bebop/cmd_vel");
@@ -115,6 +119,8 @@ class Ultimetry
     void initPublisherAndSubscribers(ros::NodeHandle n, std::string droneOdometryTopicName, std::string dsoOdometryTopicName,
 				    std::string droneCommandTopicName, std::string outputTopicName)
     {
+	init(n);
+
 	droneOdometrySubscriber.initSubscriber(n, droneOdometryTopicName);
 	dsoOdometrySubscriber.initSubscriber(n, dsoOdometryTopicName);
 	initSubscriber(n, droneCommandTopicName);
@@ -128,8 +134,10 @@ class Ultimetry
 	messageTopicName = "/ultimetry/message";
 
 	rotatingCommandActive = false;
+	dsoTransformationDone = false;
 	rotationCommandCount = 0;
 	lastAngularZ = 0;
+	dsoInitCount = 0;
 
 	dsoSumSinceLastTime.linear.x = 0;
 	dsoSumSinceLastTime.linear.y = 0;
@@ -147,10 +155,11 @@ class Ultimetry
     void publishIfNew()
     {
 	std_msgs::String message;
+    	nav_msgs::Odometry dsoOdom;
 	if (dsoOdometrySubscriber.HasNewMessage())
 	{
 	    std::ostringstream stringStream;
-    	    nav_msgs::Odometry dsoOdom = dsoOdometrySubscriber.GetNewest();
+    	    dsoOdom = dsoOdometrySubscriber.GetNewest();
 
 	    dsoSumSinceLastTime.linear.x += dsoOdom.twist.twist.linear.x;
 	    dsoSumSinceLastTime.linear.y += dsoOdom.twist.twist.linear.y;
@@ -158,12 +167,18 @@ class Ultimetry
 
 	    message.data = stringStream.str();
             ultimetryMessagePublisher.publish(message);
+
+	    if (dsoTransformationDone)
+	    {
+          	static tf::TransformBroadcaster br;
+	        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), dsoFrameId, dsoTransformedId));
+	    }
 	}
 
 	if (droneOdometrySubscriber.HasNewMessage())
 	{
 	    nav_msgs::Odometry droneOdom = droneOdometrySubscriber.GetNewest();
-	    
+
 	    if(!rotatingCommandActive && !droneLastPositionStarting())
 	    {
 		geometry_msgs::Twist dronePositionDifference;
@@ -172,6 +187,21 @@ class Ultimetry
 		dronePositionDifference.linear.z = droneOdom.pose.pose.position.z - droneLastPosition.position.z - droneCumulative.linear.z;
 		
 		double length = countVectorLength(dronePositionDifference.linear);
+
+		if (!droneLastPositionStarting() && ( countVectorLength(dsoSumSinceLastTime.linear) != 0 ) 
+			&& !dsoTransformationDone && (dsoInitCount == 0 || length > 0.1))
+		{
+	            dsoInitCount++;
+
+		    transformation.request.firstspacepoints.push_back(dsoOdom.pose.pose.position);
+		    transformation.request.secondspacepoints.push_back(droneOdom.pose.pose.position);
+
+		    if (dsoInitCount == 15)
+		    {
+                        initDsoTransformation();
+		    }
+	        }
+
 		if (length > 0.1)
 		{
 		    droneCumulative.linear.x += dronePositionDifference.linear.x * 0.1;
@@ -216,6 +246,7 @@ class Ultimetry
 
     private:
     ros::Publisher ultimetryPublisher;
+    ros::Publisher dsoPublisher;
     ros::Publisher ultimetryMessagePublisher;
     OdometrySubscriber droneOdometrySubscriber;
     OdometrySubscriber dsoOdometrySubscriber;
@@ -224,15 +255,21 @@ class Ultimetry
     geometry_msgs::Twist dsoSumSinceLastTime;    
     geometry_msgs::Twist droneCumulative;
     geometry_msgs::Pose droneLastPosition;
+    ros::ServiceClient transformationClient;
+    testing::ComputeTransformationMatrix transformation;
+    tf::Transform transform;
 
     bool newMessage;
     int count;
     nav_msgs::Odometry odometry;
     std::string messageTopicName;
-
+    std::string dsoTransformedId;
+    std::string dsoFrameId;
     bool rotatingCommandActive;
+    bool dsoTransformationDone;
     int rotationCommandCount;
     float lastAngularZ;
+    int dsoInitCount;
 
     bool droneLastPositionStarting()
     {
@@ -246,6 +283,53 @@ class Ultimetry
 	    return false;	
 
 	return true;
+    }
+
+    void initDsoTransformation()
+    {
+        ROS_INFO("Calling transformation matrix service.");
+
+	if (transformationClient.call(transformation))
+        {
+	    ROS_INFO("Received response: \nt= %f %f %f \nq= %f %f %f %f",
+	    transformation.response.transformation.translation.x,
+            transformation.response.transformation.translation.y,
+	    transformation.response.transformation.translation.z,
+	    transformation.response.transformation.rotation.x,
+	    transformation.response.transformation.rotation.y,
+	    transformation.response.transformation.rotation.z,
+	    transformation.response.transformation.rotation.w);
+
+	    transform.setOrigin(tf::Vector3(
+					transformation.response.transformation.translation.x, 
+					transformation.response.transformation.translation.y,
+					transformation.response.transformation.translation.z));
+	    tf::Quaternion q = tf::Quaternion(
+					transformation.response.transformation.rotation.x, 
+					transformation.response.transformation.rotation.y, 
+					transformation.response.transformation.rotation.z, 
+					transformation.response.transformation.rotation.w);
+	    transform.setRotation(q);
+
+            static tf::TransformBroadcaster br;
+  	    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), dsoFrameId, dsoTransformedId));
+    	}
+    	else
+    	{
+      	    ROS_ERROR("Failed to call service transformation.");
+	}
+
+	dsoTransformationDone = true;
+    }
+
+    void init(ros::NodeHandle n)
+    {
+	transformationClient = n.serviceClient<testing::ComputeTransformationMatrix>("compute_transformation_matrix");
+
+	n.param<std::string>("dso_transformed_id", dsoTransformedId, "dso_transformed");
+	n.param<std::string>("dso_frame_id", dsoFrameId, "dso_camera");
+	ROS_INFO_STREAM("dso_transformed_id = " << dsoTransformedId << "\n");
+	ROS_INFO_STREAM("dso_frame_id = " << dsoFrameId << "\n");
     }
 
     double countVectorLength(geometry_msgs::Vector3 v)
@@ -262,6 +346,7 @@ class Ultimetry
     void initPublisher(ros::NodeHandle n, std::string outputTopicName)
     {
         ultimetryPublisher = n.advertise<nav_msgs::Odometry>(outputTopicName, 1);
+        dsoPublisher = n.advertise<nav_msgs::Odometry>("dso_transformed_odometry", 1);
 	ultimetryMessagePublisher = n.advertise<std_msgs::String>(messageTopicName, 1);  
     }
 };

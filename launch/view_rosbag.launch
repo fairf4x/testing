@@ -24,7 +24,9 @@ roslaunch testing view_rosbag.launch bag:=<full path to bagfile>
 <node pkg="testing" type="frodopathy" name="frodopathy_ultimetry"
 	args="/ultimetry /ultimetry/frodopathy"/>
 
-<node pkg="testing" type="ultimetry" name="ultimetry"/>
+<node pkg="testing" type="ultimetry" name="ultimetry" output="screen"/>
+
+<node pkg="testing" type="eigenserviceprovider" name="service" output="screen"/>
 
 <!--<arg name="cmd_vel" default="/bebop/odom" />
  <node name="rqt_plot" pkg="rqt_plot" type="rqt_plot" args="$(arg cmd_vel)" /> 
@@ -32,12 +34,12 @@ roslaunch testing view_rosbag.launch bag:=<full path to bagfile>
   <arg name="model" default="$(find bebop_description)/urdf/bebop_base.urdf.xacro"/>
   <arg name="gui" default="False" />
   <param name="robot_description" command="$(find xacro)/xacro.py $(arg model)" />
-  <param name="use_gui" value="$(arg gui)"/>
+  <param name="use_gui" value="$(arg gui)"/>-->
 
 <arg name="rvizconfig" default="$(find testing)/rviz_cfg/indoor_teleop_rosbag.rviz" />
-  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />-->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />
 
-<!----><node pkg="dso_ros" type="dso_live" name="dso"
+<!----><node pkg="dso_ros" type="dso_live" name="dso" output="screen"
 	args="image:=/bebop/image_raw calib=/home/harasim/catkin_ws/runtime/calibration_recordings/calibration/camera.txt"/>
        
 </launch>
