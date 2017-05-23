@@ -4,6 +4,7 @@
 #include "nav_msgs/Path.h"
 #include "std_msgs/String.h"
 #include "geometry_msgs/Twist.h"
+#include "geometry_msgs/Point.h"
 #include "tf/transform_broadcaster.h"
 #include <string>
 #include <cmath>
@@ -134,7 +135,8 @@ class Ultimetry
 	messageTopicName = "/ultimetry/message";
 
 	rotatingCommandActive = false;
-	dsoTransformationDone = false;
+	dsoTransformationOneDone = false;
+	dsoTransformationTwoDone = false;
 	rotationCommandCount = 0;
 	lastAngularZ = 0;
 	dsoInitCount = 0;
@@ -168,10 +170,16 @@ class Ultimetry
 	    message.data = stringStream.str();
             ultimetryMessagePublisher.publish(message);
 
-	    if (dsoTransformationDone)
+	    if (dsoTransformationOneDone)
 	    {
           	static tf::TransformBroadcaster br;
-	        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), dsoFrameId, dsoTransformedId));
+	        br.sendTransform(tf::StampedTransform(transformOne, ros::Time::now(), dsoFrameId, dsoTransformedId));
+	    }
+
+	    if (dsoTransformationTwoDone)
+	    {
+          	static tf::TransformBroadcaster br;
+	        br.sendTransform(tf::StampedTransform(transformTwo, ros::Time::now(), dsoFrameId, dsoTransformedId2));
 	    }
 	}
 
@@ -189,16 +197,17 @@ class Ultimetry
 		double length = countVectorLength(dronePositionDifference.linear);
 
 		if (!droneLastPositionStarting() && ( countVectorLength(dsoSumSinceLastTime.linear) != 0 ) 
-			&& !dsoTransformationDone && (dsoInitCount == 0 || length > 0.1))
+			&& ( !dsoTransformationOneDone || !dsoTransformationTwoDone ) && length > 0.1)
 		{
-	            dsoInitCount++;
+		    resolveAddingToSpaces(dsoOdom.pose.pose.position, droneOdom.pose.pose.position);
 
-		    transformation.request.firstspacepoints.push_back(dsoOdom.pose.pose.position);
-		    transformation.request.secondspacepoints.push_back(droneOdom.pose.pose.position);
-
-		    if (dsoInitCount == 15)
+		    if (transformation.request.firstspacepoints.size() == 4)
 		    {
-                        initDsoTransformation();
+                        initDsoTransformation(1);
+		    }
+		    if (transformation.request.firstspacepoints.size() == 6)
+		    {
+                        initDsoTransformation(2);
 		    }
 	        }
 
@@ -257,16 +266,22 @@ class Ultimetry
     geometry_msgs::Pose droneLastPosition;
     ros::ServiceClient transformationClient;
     testing::ComputeTransformationMatrix transformation;
+    
     tf::Transform transform;
+
+    tf::Transform transformOne;
+    tf::Transform transformTwo;
+    bool dsoTransformationOneDone;
+    bool dsoTransformationTwoDone;
 
     bool newMessage;
     int count;
     nav_msgs::Odometry odometry;
     std::string messageTopicName;
     std::string dsoTransformedId;
+    std::string dsoTransformedId2;
     std::string dsoFrameId;
     bool rotatingCommandActive;
-    bool dsoTransformationDone;
     int rotationCommandCount;
     float lastAngularZ;
     int dsoInitCount;
@@ -285,7 +300,48 @@ class Ultimetry
 	return true;
     }
 
-    void initDsoTransformation()
+    void resolveAddingToSpaces(geometry_msgs::Point dso, geometry_msgs::Point drone)
+    {
+	ROS_INFO("Resolving adding vectors to request.------------------------------------------------------------------");
+	tf::Vector3 toAdd;
+	toAdd.setX(dso.x);
+	toAdd.setY(dso.y);
+	toAdd.setZ(dso.z);
+
+	int currentSpaceSize = transformation.request.firstspacepoints.size();
+	if (currentSpaceSize > 1)
+	{
+	    tf::Vector3 lastAdded;
+	    tf::Vector3 secondToLast;
+
+	    lastAdded.setX(transformation.request.firstspacepoints[currentSpaceSize-1].x);
+	    lastAdded.setY(transformation.request.firstspacepoints[currentSpaceSize-1].y);
+	    lastAdded.setZ(transformation.request.firstspacepoints[currentSpaceSize-1].z);
+
+	    secondToLast.setX(transformation.request.firstspacepoints[currentSpaceSize-2].x);
+	    secondToLast.setY(transformation.request.firstspacepoints[currentSpaceSize-2].y);
+	    secondToLast.setZ(transformation.request.firstspacepoints[currentSpaceSize-2].z);
+
+	    tf::Vector3 currentVector(toAdd.x(),toAdd.y(),toAdd.z());
+	    tf::Vector3 lastVector(lastAdded.x(),lastAdded.y(),lastAdded.z());
+	    
+	    currentVector -= lastAdded;
+	    lastVector -= secondToLast;
+
+	    ROS_INFO("The angle was %f.", lastVector.angle(currentVector));
+	    if (lastVector.angle(currentVector) < 0.15)
+	    {
+	        return;
+	    }
+	}
+
+	ROS_INFO("Adding vector %f %f %f to the set.", dso.x, dso.y, dso.z);
+	transformation.request.firstspacepoints.push_back(drone);
+	transformation.request.secondspacepoints.push_back(dso);
+	//ROS_INFO("The space now has a size of %d.", transformation.request.firstspacepoints.size());
+    }
+
+    void initDsoTransformation(int transformNumber)
     {
         ROS_INFO("Calling transformation matrix service.");
 
@@ -310,16 +366,33 @@ class Ultimetry
 					transformation.response.transformation.rotation.z, 
 					transformation.response.transformation.rotation.w);
 	    transform.setRotation(q);
-
-            static tf::TransformBroadcaster br;
-  	    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), dsoFrameId, dsoTransformedId));
     	}
     	else
     	{
       	    ROS_ERROR("Failed to call service transformation.");
 	}
 
-	dsoTransformationDone = true;
+	if (transformNumber == 1)
+	{
+	    dsoTransformationOneDone = true;
+
+	    transformOne.setOrigin(transform.getOrigin());
+	    transformOne.setRotation(transform.getRotation());
+
+            static tf::TransformBroadcaster br;
+  	    br.sendTransform(tf::StampedTransform(transformOne, ros::Time::now(), dsoFrameId, dsoTransformedId));
+	}
+
+	if (transformNumber == 2)
+	{
+	    dsoTransformationTwoDone = true;
+
+	    transformTwo.setOrigin(transform.getOrigin());
+	    transformTwo.setRotation(transform.getRotation());
+
+            static tf::TransformBroadcaster br;
+  	    br.sendTransform(tf::StampedTransform(transformTwo, ros::Time::now(), dsoFrameId, dsoTransformedId2));
+	}
     }
 
     void init(ros::NodeHandle n)
@@ -327,9 +400,8 @@ class Ultimetry
 	transformationClient = n.serviceClient<testing::ComputeTransformationMatrix>("compute_transformation_matrix");
 
 	n.param<std::string>("dso_transformed_id", dsoTransformedId, "dso_transformed");
+	n.param<std::string>("dso_transformed_id_two", dsoTransformedId2, "dso_transformed_two");
 	n.param<std::string>("dso_frame_id", dsoFrameId, "dso_camera");
-	ROS_INFO_STREAM("dso_transformed_id = " << dsoTransformedId << "\n");
-	ROS_INFO_STREAM("dso_frame_id = " << dsoFrameId << "\n");
     }
 
     double countVectorLength(geometry_msgs::Vector3 v)

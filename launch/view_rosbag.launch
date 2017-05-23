@@ -18,6 +18,12 @@ roslaunch testing view_rosbag.launch bag:=<full path to bagfile>
 <node pkg="testing" type="frodopathy" name="frodopathy"
 	args="/bebop/odom /bebop/frodopathy"/>
 
+<node pkg="testing" type="frodopathy" name="frodopathy_tftodo"
+	args="/tftodo/odom /tftodo/frodopathy"/>
+
+<node pkg="testing" type="frodopathy" name="frodopathy_tftodo2"
+	args="/tftodo/odom2 /tftodo/frodopathy2"/>
+
 <node pkg="testing" type="frodopathy" name="frodopathy_dso"
 	args="/dso_odom_topic /dso/frodopathy"/>
 
@@ -26,7 +32,13 @@ roslaunch testing view_rosbag.launch bag:=<full path to bagfile>
 
 <node pkg="testing" type="ultimetry" name="ultimetry" output="screen"/>
 
-<node pkg="testing" type="eigenserviceprovider" name="service" output="screen"/>
+<node pkg="testing" type="tftodo" name="tftodo" output="screen"
+	args="odom dso_transformed tftodo/odom"/>
+
+<node pkg="testing" type="tftodo" name="tftodo2" output="screen"
+	args="odom dso_transformed_two tftodo/odom2"/>
+
+<node pkg="testing" type="eigenserviceprovider" name="service"/>
 
 <!--<arg name="cmd_vel" default="/bebop/odom" />
  <node name="rqt_plot" pkg="rqt_plot" type="rqt_plot" args="$(arg cmd_vel)" /> 

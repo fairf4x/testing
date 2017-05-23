@@ -84,6 +84,20 @@ Visualization Manager:
       Topic: /ultimetry/frodopathy
       Value: true
       Style: lines
+    - Class: rviz/Path
+      Color: 255; 0; 255
+      Enabled: true
+      Name: Path
+      Topic: /tftodo/frodopathy
+      Value: true
+      Style: lines
+    - Class: rviz/Path
+      Color: 255; 255; 0
+      Enabled: true
+      Name: Path
+      Topic: /tftodo/frodopathy2
+      Value: true
+      Style: lines
     - Alpha: 1
       Class: rviz/RobotModel
       Collision Enabled: false
