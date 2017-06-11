@@ -7,16 +7,27 @@ usage:
 roslaunch testing view_rosbag.launch bag:=<full path to bagfile>
 
 -->
-
+<param name="use_sim_time" value="true" />
 <!-- read bagname from command line -->
 <arg name="bag" />
 
 <!-- run rosbag play with specified bag -->
 <node pkg="rosbag" type="play" name="rosbag_play"
-       args="--pause $(arg bag)" output="screen"/>
+       args="--clock --pause $(arg bag)" output="screen"/>
 
-<node pkg="testing" type="frodopathy" name="frodopathy"
+<!--<node pkg="testing" type="frodopathy" name="frodopathy"
 	args="/bebop/odom /bebop/frodopathy"/>
+
+<node pkg="testing" type="frodopathy" name="frodopathy_dso"
+	args="/dso_odom /dso/frodopathy"/>
+
+<node pkg="testing" type="frodopathy" name="frodopathy_ekf"
+	args="/ekf/odometry /ekf/frodopathy"/>
+
+<node pkg="testing" type="frodopathy" name="frodopathy_ukf"
+	args="/ukf/odometry /ukf/frodopathy"/>
+
+<node pkg="testing" type="ultimetry" name="ultimetry" output="screen"/>
 
 <node pkg="testing" type="frodopathy" name="frodopathy_tftodo"
 	args="/tftodo/odom /tftodo/frodopathy"/>
@@ -24,24 +35,18 @@ roslaunch testing view_rosbag.launch bag:=<full path to bagfile>
 <node pkg="testing" type="frodopathy" name="frodopathy_tftodo2"
 	args="/tftodo/odom2 /tftodo/frodopathy2"/>
 
-<node pkg="testing" type="frodopathy" name="frodopathy_dso"
-	args="/dso_odom_topic /dso/frodopathy"/>
-
-<node pkg="testing" type="frodopathy" name="frodopathy_ultimetry"
-	args="/ultimetry /ultimetry/frodopathy"/>
-
-<node pkg="testing" type="ultimetry" name="ultimetry" output="screen"/>
-
 <node pkg="testing" type="tftodo" name="tftodo" output="screen"
 	args="odom dso_transformed tftodo/odom"/>
 
 <node pkg="testing" type="tftodo" name="tftodo2" output="screen"
 	args="odom dso_transformed_two tftodo/odom2"/>
 
-<node pkg="testing" type="eigenserviceprovider" name="service"/>
+<node pkg="testing" type="eigenserviceprovider" name="service"/>-->
 
 <!--<arg name="cmd_vel" default="/bebop/odom" />
  <node name="rqt_plot" pkg="rqt_plot" type="rqt_plot" args="$(arg cmd_vel)" /> 
+
+  <include file="$(find octomap_server)/launch/octomap_mapping.launch" />
 
   <arg name="model" default="$(find bebop_description)/urdf/bebop_base.urdf.xacro"/>
   <arg name="gui" default="False" />
@@ -51,7 +56,26 @@ roslaunch testing view_rosbag.launch bag:=<full path to bagfile>
 <arg name="rvizconfig" default="$(find testing)/rviz_cfg/indoor_teleop_rosbag.rviz" />
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />
 
-<!----><node pkg="dso_ros" type="dso_live" name="dso" output="screen"
-	args="image:=/bebop/image_raw calib=/home/harasim/catkin_ws/runtime/calibration_recordings/calibration/camera.txt"/>
-       
+<!--<node pkg="dso_ros" type="dso_live" name="dso" output="screen"
+	args="image:=/bebop/image_raw calib=/home/harasim/catkin_ws/runtime/calibration_recordings/calibration/camera.txt"/>-->
+
+<!--   <node pkg="dso_ros" type="dso_node" name="dso_ros" output="screen" 
+		args="image:=/bebop/image_raw calib=/home/harasim/catkin_ws/runtime/calibration_recordings/calibration/camera.txt">--> 
+       <!-- <remap from="image" to="/image_raw"/>-->
+  <!--      <param name="debug" type="bool" value="true"/>
+        <param name="display_GUI" type="bool" value="false"/>
+
+        <param name="calib_file_path" type="string" value="/home/harasim/catkin_ws/runtime/calibration_recordings/calibration/camera.txt"/>
+        <param name="vignette_file_path" type="string" value=""/>
+        <param name="gamma_file_path" type="string" value=""/>
+
+        <param name="dso_frame_id" type="string" value="dso_odom"/>
+        <param name="odom_frame_id" type="string" value="odom"/>
+        <param name="base_frame_id" type="string" value="base_link"/>
+        <param name="camera_frame_id" type="string" value="base_link"/>
+    </node>       
+
+  <include file="$(find robot_localization)/launch/ekf_bebop.launch" />
+  <include file="$(find robot_localization)/launch/ukf_bebop.launch" />-->
+
 </launch>

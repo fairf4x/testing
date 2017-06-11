@@ -112,7 +112,7 @@ class Ultimetry
 	init(n);
 
 	droneOdometrySubscriber.initSubscriber(n, "/bebop/odom");
-	dsoOdometrySubscriber.initSubscriber(n, "/dso_odom_topic");
+	dsoOdometrySubscriber.initSubscriber(n, "/dso_odom");
 	initSubscriber(n, "/bebop/cmd_vel");
         initPublisher(n, "/ultimetry");
     }
@@ -440,7 +440,7 @@ int main (int argc, char **argv)
     {
     	outputTopicName = argv[1];
 	droneOdometryTopicName = argv[2];
-        dsoOdometryTopicName = "/dso_odom_topic";
+        dsoOdometryTopicName = "/dso_odom";
 	droneCommandTopicName = "/bebop/cmd_vel";
 	if (argc >= 4)
 	{

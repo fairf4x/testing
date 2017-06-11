@@ -1,11 +1,12 @@
 <?xml version="1.0" ?>
 <!-- based on example launch files from joy_teleop and teleop_twist_joy packages -->
 <launch>
-  <arg name="joy_dev" default="/dev/input/js0" />
-  <arg name="joy_config" default="xbox360" />
+  <arg name="joy_dev" default="/dev/input/js2" />
+  <arg name="joy_config" default="xboxOne" />
   <arg name="teleop_config" default="$(find testing)/config/$(arg joy_config).yaml" />
+  <arg name="namespace" default="joystick" />
 
-<!-- no namespace used in simulation -->
+  <group ns="$(arg namespace)">
     <rosparam file="$(arg teleop_config)" command="load" />
 
     <node pkg="joy" type="joy_node" name="joy_node">
@@ -16,5 +17,6 @@
 
     <node pkg="joy_teleop" type="joy_teleop.py" name="joy_teleop">
     </node>
+  </group>
 
 </launch>

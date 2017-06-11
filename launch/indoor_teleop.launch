@@ -11,7 +11,7 @@
     <arg name="namespace" default="bebop" />
     <arg name="ip" default="192.168.42.1" />
     <!-- hull protection: 1 = installed, 0 = not installed -->
-    <arg name="hull" default="0" />
+    <arg name="hull" default="1" />
     <!-- speed settings: 1 = indoor flight, 0 = outdoor flight -->
     <arg name="outdoorSpeed" default="1" />
 

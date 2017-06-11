@@ -88,14 +88,14 @@ Visualization Manager:
       Color: 255; 0; 255
       Enabled: true
       Name: Path
-      Topic: /tftodo/frodopathy
+      Topic: /ekf/frodopathy
       Value: true
       Style: lines
     - Class: rviz/Path
       Color: 255; 255; 0
       Enabled: true
       Name: Path
-      Topic: /tftodo/frodopathy2
+      Topic: /ukf/frodopathy
       Value: true
       Style: lines
     - Alpha: 1
