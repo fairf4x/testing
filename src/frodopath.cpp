@@ -10,6 +10,9 @@ class Frodopathy
     { 
 	ROS_INFO("I heard: [%s]", odom->header.frame_id.c_str());
 
+        if (count != 0 and areTooSimilar(odom->pose.pose, path.poses[path.poses.size()-1].pose))
+            return;
+
 	path.header.seq = ++count;
 	path.header.stamp = ros::Time::now();
 	path.header.frame_id = "odom";
@@ -39,6 +42,7 @@ class Frodopathy
     { 
         newMessage = false;
 	count = 0;
+        treshold = 0.05;
     }
 
     void publishIfNew()
@@ -57,6 +61,7 @@ class Frodopathy
     nav_msgs::Path path;
     bool newMessage;
     int count;
+    double treshold;
 
     void initSubscriber(ros::NodeHandle n, std::string sourceTopicName)
     {
@@ -66,6 +71,20 @@ class Frodopathy
     void initPublisher(ros::NodeHandle n, std::string outputTopicName)
     {
         frodopathyPublisher = n.advertise<nav_msgs::Path>(outputTopicName, 50); 
+    }
+
+    bool areTooSimilar(geometry_msgs::Pose first, geometry_msgs::Pose second)
+    {
+        if (std::abs(first.position.x - second.position.x) > treshold)
+            return false;
+
+        if (std::abs(first.position.y - second.position.y) > treshold)
+            return false;
+
+        if (std::abs(first.position.z - second.position.z) > treshold)
+            return false;
+
+        return true;
     }
 };
 

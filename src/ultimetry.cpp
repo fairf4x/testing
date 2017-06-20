@@ -201,7 +201,7 @@ class Ultimetry
 		{
 		    resolveAddingToSpaces(dsoOdom.pose.pose.position, droneOdom.pose.pose.position);
 
-		    if (transformation.request.firstspacepoints.size() == 4)
+		    if (transformation.request.firstspacepoints.size() == 3)
 		    {
                         initDsoTransformation(1);
 		    }

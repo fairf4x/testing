@@ -73,7 +73,18 @@ bool computeTransformationMatrix(testing::ComputeTransformationMatrix::Request& 
     res.transformation.translation.y = result(1,3);
     res.transformation.translation.z = result(2,3);
 
+ //   res.transformation.translation.x = 0;
+   // res.transformation.translation.y = 0;
+    //res.transformation.translation.z = 0;
+
+//    Eigen::Matrix<float,3,3> toSend;
     Eigen::Quaternionf q(result.block<3,3>(0,0));
+
+//    toSend(0,0) = 1;    toSend(0,1) = 0;    toSend(0,2) = 0;
+//    toSend(1,0) = 0;    toSend(1,1) = 1;    toSend(1,2) = 0;
+//    toSend(2,0) = 0;    toSend(2,1) = 0;    toSend(2,2) = 1;
+//    Eigen::Quaternionf q(toSend);
+
     res.transformation.rotation.x = q.x();
     res.transformation.rotation.y = q.y();
     res.transformation.rotation.z = q.z();

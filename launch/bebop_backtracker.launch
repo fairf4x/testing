@@ -1,0 +1,6 @@
+<launch>
+  <node name="backtracker" pkg="testing" type="backtracker" respawn="false" output="screen">
+  </node>
+
+<node pkg="testing" type="robottrajectory" name="path_to_trajectory" output="screen"/>
+</launch>

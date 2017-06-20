@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+
+<!--<param name="testParam1" type="double" value="3.4" />
+<param name="testParam2" type="double" value="0.32" /> -->
+
+<node pkg="testing" type="testparam" name="paramtest" output="screen"/>
+       
+</launch>
