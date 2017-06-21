@@ -13,8 +13,9 @@
   <param name="odom_frame_id" type="string" value="odom" />
   <param name="base_frame_id" type="string" value="base_link" />
 
-    <node pkg="dso_ros" type="dso_live" args="calib=$(find testing)/config/$(arg drone)_cam.txt" name="dso_ros" output="screen">
-        <remap from="image" to="/bebop/image_raw"/>
-    </node>
+<!--  <node pkg="dso_ros" type="dso_live" args="calib=$(find testing)/config/$(arg drone)_cam.txt gamma=$(find testing)/config/$(arg drone)_pcalib.txt" name="dso_ros" output="screen">  -->
+  <node pkg="dso_ros" type="dso_live" args="calib=$(find testing)/config/$(arg drone)_cam.txt mode=1 preset=1 nogui=1" name="dso_ros" output="screen"> 
+      <remap from="image" to="/bebop/image_raw"/>
+  </node>
 
 </launch>

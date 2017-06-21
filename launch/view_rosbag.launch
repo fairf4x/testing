@@ -17,8 +17,4 @@ roslaunch testing view_rosbag.launch bag:=<full path to bagfile>
 
 <!-- run image_view to see images from the bag -->
 <node pkg="image_view" type="image_view" name="imview" args="image:=/bebop/image_raw" /> 
-
-<arg name="cmd_vel" default="/bebop/odom" />
- <node name="rqt_plot" pkg="rqt_plot" type="rqt_plot" args="$(arg cmd_vel)" />
-       
 </launch>
