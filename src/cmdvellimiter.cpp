@@ -20,10 +20,10 @@ class CmdVelLimiter
         initPublisher(n, outputTopicName);
     }
 
-    CmdVelLimiter() 
+    CmdVelLimiter(double lim) 
     {
 	newMessage = false;
-	limit = 0.5;
+	limit = lim;
     }
 
     void publishIfNew()
@@ -58,11 +58,20 @@ class CmdVelLimiter
 	if (lastMessage.linear.x > limit)
 	    lastMessage.linear.x = limit;
 
+	if (lastMessage.linear.x < -limit)
+	    lastMessage.linear.x = -limit;
+
 	if (lastMessage.linear.y > limit)
 	    lastMessage.linear.y = limit;
 
+	if (lastMessage.linear.y < -limit)
+	    lastMessage.linear.y = -limit;
+
 	if (lastMessage.angular.z > limit)
 	    lastMessage.angular.z = limit;
+
+	if (lastMessage.angular.z < -limit)
+	    lastMessage.angular.z = -limit;
     }
 };
 
@@ -84,7 +93,10 @@ int main (int argc, char **argv)
 	argumentsPassed = true;
     } 
 
-    CmdVelLimiter limiter;
+    double limit;
+    n.param<double>("cmd_vel_limit", limit, 0.3);
+
+    CmdVelLimiter limiter(limit);
 
     if(argumentsPassed)
     {

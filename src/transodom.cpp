@@ -8,8 +8,8 @@ class Transodom
     public:
     void odomCallback(const nav_msgs::Odometry::ConstPtr& odom)
     { 
-	ROS_INFO("I heard: [%f,%f,%f]", odom->pose.pose.position.x, odom->pose.pose.position.y, 
-					odom->pose.pose.position.z);
+	//ROS_INFO("I heard: [%f,%f,%f]", odom->pose.pose.position.x, odom->pose.pose.position.y, 
+	//				odom->pose.pose.position.z);
 
 	toSend.header.seq = ++count;
 	toSend.header.stamp = odom->header.stamp;
@@ -35,18 +35,14 @@ class Transodom
         initPublisher(n, outputTopicName);
     }
 
-    Transodom() 
+    Transodom(tf::Vector3 tra, tf::Vector3 rot, tf::Vector3 sca) 
     { 
         newMessage = false;
 	count = 0;
 
-	lastTransformed.setX(0.6);
-	lastTransformed.setY(-0.35);
-	lastTransformed.setZ(1.65);
-
-	lastRotated.setX(0);
-	lastRotated.setY(0);
-	lastRotated.setZ(0);
+	translation = tra;
+	rotation = rot;
+	scale = sca;
     }
 
     void publishIfNew()
@@ -62,11 +58,13 @@ class Transodom
     ros::Publisher odometryPublisher;
     ros::Subscriber odometrySubscriber;
 
-    tf::Vector3 lastRotated;
-    tf::Vector3 lastTransformed;
     nav_msgs::Odometry toSend;
     bool newMessage;
     int count;
+
+    tf::Vector3 translation;
+    tf::Vector3 rotation;
+    tf::Vector3 scale;
 
     void initSubscriber(ros::NodeHandle n, std::string sourceTopicName)
     {
@@ -84,6 +82,7 @@ class Transodom
 	toReturn.header = toTransform.header;
 	toReturn.pose = toTransform.pose;
 
+/*
 	tf::Vector3 axis(0,0,1);
 	int permutation[3] = {1, 3, 2};
 	double angle = 2.1;
@@ -91,29 +90,23 @@ class Transodom
 	double yScale = 8;
 	double zScale = 2;
 
-	tf::Vector3 working(toTransform.pose.pose.position.x, toTransform.pose.pose.position.y, 				toTransform.pose.pose.position.z);
+	tf::Vector3 working(toTransform.pose.pose.position.x, toTransform.pose.pose.position.y, toTransform.pose.pose.position.z);
 	working = Permute(working, permutation);
 	working = working.rotate(axis, angle);
 
 	toReturn.pose.pose.position.x = working.getX() + 0.6;	
 	toReturn.pose.pose.position.y = working.getY() - 0.35;
 	toReturn.pose.pose.position.z = working.getZ() + 1.65;
+*/
+	tf::Vector3 working(toTransform.pose.pose.position.x, toTransform.pose.pose.position.y, toTransform.pose.pose.position.z);
 
-//  double tr_x = toReturn.pose.pose.position.x-lastRotated.getX();
-//  double tr_y = toReturn.pose.pose.position.y-lastRotated.getY();
-//  double tr_z = toReturn.pose.pose.position.z-lastRotated.getZ();
+	working = working.rotate(tf::Vector3(1,0,0), rotation.getX());
+	working = working.rotate(tf::Vector3(0,1,0), rotation.getY());
+	working = working.rotate(tf::Vector3(0,0,1), rotation.getZ());
 
-//  lastRotated.setX(toReturn.pose.pose.position.x);
-//  lastRotated.setY(toReturn.pose.pose.position.y);
-//  lastRotated.setZ(toReturn.pose.pose.position.z);
-
-//  toReturn.pose.pose.position.x = lastTransformed.getX() + tr_x*8;
-//  toReturn.pose.pose.position.y = lastTransformed.getY() + tr_y*8;
-//  toReturn.pose.pose.position.z = lastTransformed.getZ() + tr_z*2;
-
-//lastTransformed.setX(toReturn.pose.pose.position.x);
-//lastTransformed.setY(toReturn.pose.pose.position.y);
-//lastTransformed.setZ(toReturn.pose.pose.position.z);
+	toReturn.pose.pose.position.x = working.getX() + translation.getX();	
+	toReturn.pose.pose.position.y = working.getY() + translation.getY();
+	toReturn.pose.pose.position.z = working.getZ() + translation.getZ();
 
 	return toReturn;
     }
@@ -158,7 +151,29 @@ int main (int argc, char **argv)
 	argumentsPassed = true;
     } 
 
-    Transodom transodo;
+    double xTranslation;
+    double yTranslation;
+    double zTranslation;
+    double xAxisRotation;
+    double yAxisRotation;
+    double zAxisRotation;
+    double xScale;
+    double yScale;
+    double zScale;
+
+    n.param<double>("dso_base_tr_x_translation", xTranslation, 0.0);
+    n.param<double>("dso_base_tr_y_translation", yTranslation, 0.0);
+    n.param<double>("dso_base_tr_z_translation", zTranslation, 0.0);
+    n.param<double>("dso_base_tr_x_rotation", xAxisRotation, 0.0);
+    n.param<double>("dso_base_tr_y_rotation", yAxisRotation, 0.0);
+    n.param<double>("dso_base_tr_z_rotation", zAxisRotation, 0.0);
+    n.param<double>("dso_base_tr_x_scale", xScale, 1.0);
+    n.param<double>("dso_base_tr_y_scale", yScale, 1.0);
+    n.param<double>("dso_base_tr_z_scale", zScale, 1.0);
+
+    Transodom transodo( tf::Vector3(xTranslation, yTranslation, zTranslation), 
+			tf::Vector3(xAxisRotation, yAxisRotation, zAxisRotation), 
+			tf::Vector3(xScale, yScale, zScale));
 
     if(argumentsPassed)
     {
