@@ -5,118 +5,40 @@
 class CmdVelLimiter
 {
     public:
-    void callback(const geometry_msgs::Twist::ConstPtr& twist)
+    geometry_msgs::Twist getLimitedCommand(geometry_msgs::Twist cmd)
     { 
-        newMessage = true;
-	lastMessage.linear = twist->linear;
-	lastMessage.angular = twist->angular;
+	geometry_msgs::Twist toReturn;
+	toReturn.linear = cmd.linear;
+	toReturn.angular = cmd.angular;
 
-	processLastMessage();
+	if (toReturn.linear.x > movementLimit)
+	    toReturn.linear.x = movementLimit;
+
+	if (toReturn.linear.x < -movementLimit)
+	    toReturn.linear.x = -movementLimit;
+
+	if (toReturn.linear.y > movementLimit)
+	    toReturn.linear.y = movementLimit;
+
+	if (toReturn.linear.y < -movementLimit)
+	    toReturn.linear.y = -movementLimit;
+
+	if (toReturn.angular.z > rotationLimit)
+	    toReturn.angular.z = rotationLimit;
+
+	if (toReturn.angular.z < -rotationLimit)
+	    toReturn.angular.z = -rotationLimit;
+
+	return toReturn;
     }
 
-    void initPublisherAndSubscriber(ros::NodeHandle n, std::string sourceTopicName, std::string outputTopicName)
+    CmdVelLimiter(double moveLim, double rotLim) 
     {
-	initSubscriber(n, sourceTopicName);
-        initPublisher(n, outputTopicName);
-    }
-
-    CmdVelLimiter(double lim) 
-    {
-	newMessage = false;
-	limit = lim;
-    }
-
-    void publishIfNew()
-    {
-	if (newMessage)
-	{
-	    cmdVelPublisher.publish(lastMessage);
-            newMessage = false;
-	}
+	movementLimit = std::min( 1.0, std::abs(moveLim) );
+	rotationLimit = std::min( 1.0, std::abs(rotLim) );
     }
 
     private:
-    ros::Publisher cmdVelPublisher;
-    ros::Subscriber cmdVelSubscriber;
-
-    geometry_msgs::Twist lastMessage;
-    bool newMessage;
-    float limit;
-
-    void initSubscriber(ros::NodeHandle n, std::string sourceTopicName)
-    {
-        cmdVelSubscriber = n.subscribe(sourceTopicName, 50, &CmdVelLimiter::callback, this);
-    }
-
-    void initPublisher(ros::NodeHandle n, std::string outputTopicName)
-    {
-        cmdVelPublisher = n.advertise<geometry_msgs::Twist>(outputTopicName, 50); 
-    }
-
-    void processLastMessage()
-    {
-	if (lastMessage.linear.x > limit)
-	    lastMessage.linear.x = limit;
-
-	if (lastMessage.linear.x < -limit)
-	    lastMessage.linear.x = -limit;
-
-	if (lastMessage.linear.y > limit)
-	    lastMessage.linear.y = limit;
-
-	if (lastMessage.linear.y < -limit)
-	    lastMessage.linear.y = -limit;
-
-	if (lastMessage.angular.z > limit)
-	    lastMessage.angular.z = limit;
-
-	if (lastMessage.angular.z < -limit)
-	    lastMessage.angular.z = -limit;
-    }
+    double movementLimit;
+    double rotationLimit;
 };
-
-int main (int argc, char **argv)
-{
-    ros::init(argc, argv, "cmdVelLimiter");
-    ros::NodeHandle n;
-
-    ROS_INFO("Have %i arguments passed.", argc);
-
-    std::string sourceTopicName;
-    std::string outputTopicName;
-    bool argumentsPassed = false;
-
-    if (argc == 3)
-    {
-    	sourceTopicName = argv[1];
-	outputTopicName = argv[2];
-	argumentsPassed = true;
-    } 
-
-    double limit;
-    n.param<double>("cmd_vel_limit", limit, 0.3);
-
-    CmdVelLimiter limiter(limit);
-
-    if(argumentsPassed)
-    {
-        ROS_INFO("Got params: %s, %s", sourceTopicName.c_str(), outputTopicName.c_str());
-	limiter.initPublisherAndSubscriber(n, sourceTopicName, outputTopicName);
-    }
-    else
-    {
-        ROS_INFO("Got no params, using /cmd_vel_to_limit and /limiter/cmd_vel.");
-	limiter.initPublisherAndSubscriber(n, "/cmd_vel_to_limit", "/limiter/cmd_vel");
-    }
-
-    ros::Rate loop_rate(50);
-
-    while(ros::ok())
-    {
-        limiter.publishIfNew();
-        ros::spinOnce();
-        loop_rate.sleep();    
-    }
-
-    return 0;
-}
