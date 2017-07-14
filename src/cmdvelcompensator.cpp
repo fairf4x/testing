@@ -44,7 +44,7 @@ class CmdVelCompensator
 	compensationZ = compZ;
 	compensationRot = compRot;
 
-	part = 66;
+	milisecondsNotCompensating = 66;
     }
 
     private:
@@ -53,7 +53,7 @@ class CmdVelCompensator
     double compensationZ;
     double compensationRot;
 
-    int part;
+    int milisecondsNotCompensating;
 
     double makeValid(double in)
     {
@@ -71,7 +71,7 @@ class CmdVelCompensator
 	ros::Time stamp = ros::Time::now();
 	int val = (long)(( stamp.toSec()-(long)stamp.toSec() ) * 100);
 	
-	if (val > part)
+	if (val > milisecondsNotCompensating)
 	    return true;
 
 	return false;

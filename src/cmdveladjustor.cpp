@@ -24,7 +24,7 @@ class CmdVelAdjustor
     CmdVelAdjustor(double compX, double compY, double compZ, double compRot, double movLim, double rotLim) 
 	: limiter_(movLim, rotLim),
 	  compensator_(compX, compY, compZ, compRot),
-	  booster_(compX, compY, compZ, compRot, movLim)
+	  booster_(compX, compY, movLim)
     {
 	newMessage = false;
     }
@@ -35,9 +35,6 @@ class CmdVelAdjustor
 	{
 	    actualMessage = limiter_.getLimitedCommand(actualMessage);
 
-	    // this has to be called so the compensator doesn't desync its counter
-	    double compensatedX = compensator_.compensateX(actualMessage.linear.x);
-	    double compensatedY = compensator_.compensateY(actualMessage.linear.y);
 	    
 	    booster_.resolveBoosting(actualMessage);
 	
@@ -47,7 +44,7 @@ class CmdVelAdjustor
 	    }
 	    else
 	    {
-		actualMessage.linear.x = compensatedX;
+		actualMessage.linear.x = compensator_.compensateX(actualMessage.linear.x);
 	    }
 
 	    if (booster_.isBoostingY())
@@ -56,7 +53,7 @@ class CmdVelAdjustor
 	    }
 	    else
 	    {
-		actualMessage.linear.y = compensatedY;
+		actualMessage.linear.y = compensator_.compensateY(actualMessage.linear.y);
 	    }
 
 
