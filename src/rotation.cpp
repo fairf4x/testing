@@ -53,67 +53,10 @@
 #include "trajectory_msgs/MultiDOFJointTrajectoryPoint.h"
 #include "testing/GetRobotTrajectoryFromPath.h"
 
-nav_msgs::Path path;
-
-void pathCallback(const nav_msgs::Path::ConstPtr& msg)
-{
-   path = *msg;
-}
-
-nav_msgs::Path turnPathAround()
-{
-    nav_msgs::Path result;
-
-    int j = path.poses.size()-1;
-
-//ROS_INFO("The path has %d poses.", j);
-    if (j <= 0)
-    {
-	return result;
-    }
-
-        ros::Time lastUsed = path.poses[j].header.stamp - ros::Duration(0.2);
-
-    for (int i = j; i >= 0; i-- )
-    {
-//ROS_INFO("Index had a value of %d.", i);
-        geometry_msgs::PoseStamped pose;
-        pose.pose = path.poses[i].pose;
-	pose.pose.orientation.w = 1;
-	pose.pose.orientation.x = 0;
-	pose.pose.orientation.y = 0;
-	pose.pose.orientation.z = 0;
-
-	if (pose.pose.position.z < 0.9)
-	{
-	    pose.pose.position.z = 0.9;
-	}
-
-	pose.header.stamp = lastUsed + ros::Duration(0.2);
-        lastUsed = lastUsed + ros::Duration(0.2);
-
-        result.poses.push_back(pose);
-    }
-
-    ROS_INFO("The path has %d poses.", (int)result.poses.size());
-
-    return result;
-}
-
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "bebop_backtracker");
+  ros::init(argc, argv, "bebop_rotation");
   ros::NodeHandle node_handle;
-
-    std::string sourceTopicName;
-    node_handle.param<std::string>("path_to_backtrack_topic", sourceTopicName, "/frodopathy");
-
-    if (argc == 2)
-    {
-    	sourceTopicName = argv[1];
-    } 
-
-  ros::Subscriber pathSubscriber = node_handle.subscribe(sourceTopicName, 50, pathCallback);
 
   ros::AsyncSpinner spinner(1);
   spinner.start();
@@ -126,45 +69,37 @@ int main(int argc, char **argv)
   moveit_visual_tools::MoveItVisualTools visual_tools("odom");
   visual_tools.deleteAllMarkers();
 
- // Eigen::Affine3d text_pose = Eigen::Affine3d::Identity();
- // text_pose.translation().z() = 0.75; 
-
-  ROS_INFO_NAMED("backtracker", "Got path with %d points.", (int)path.poses.size());
-
-  ROS_INFO_NAMED("backtracker", "Reference frame: %s", move_group.getPlanningFrame().c_str());
-  visual_tools.trigger();
-  visual_tools.prompt("next step");
-
-  ROS_INFO_NAMED("backtracker", "Got path with %d points.", (int)path.poses.size());
-  pathSubscriber.shutdown();
-  
+  ROS_INFO_NAMED("tutorial", "Reference frame: %s", move_group.getPlanningFrame().c_str());
 
   ros::Publisher statePublisher;
   statePublisher = node_handle.advertise<moveit_msgs::DisplayTrajectory>("/move_group/display_planned_path", 1); 
 
-  moveit::planning_interface::MoveGroupInterface::Plan backtrackingPlan;
+for (int i = 0; i < 2; i++)
+{
+
+  visual_tools.trigger();
+  visual_tools.prompt("next step");
+
+
+  moveit::planning_interface::MoveGroupInterface::Plan plan;
   moveit_msgs::DisplayTrajectory displayTrajectory;
   displayTrajectory.model_id = "bebop";
 
-  ROS_INFO_NAMED("backtracker", "Trajectory initialized.");
   moveit_msgs::RobotState robotStateMsg;
   auto currentState = move_group.getCurrentState();  
-ROS_INFO_NAMED("backtracker", "Current robot state aquired.");
   moveit::core::robotStateToRobotStateMsg(*currentState.get(), robotStateMsg);
 
-  ROS_INFO_NAMED("backtracker", "Current robot state converted to message.");
-  backtrackingPlan.start_state_ = robotStateMsg;
+  plan.start_state_ = robotStateMsg;
   displayTrajectory.trajectory_start = robotStateMsg;
-
 
   testing::GetRobotTrajectoryFromPath trajectoryFromPath;
 ros::ServiceClient trajectoryClient = 
           node_handle.serviceClient<testing::GetRobotTrajectoryFromPath>("get_robot_trajectory_from_path");
     ROS_INFO("Calling path to robot trajectory service.");
-  ROS_INFO_NAMED("backtracker", "Service registered.");
 
 
- /* nav_msgs::Path path;
+
+  nav_msgs::Path path;
   path.header.stamp = ros::Time::now();
   path.header.frame_id = "odom";
 
@@ -172,18 +107,26 @@ ros::ServiceClient trajectoryClient =
   geometry_msgs::PoseStamped pose;
   pose.header.stamp = start;
   pose.pose.orientation.w = 1;
-  path.poses.push_back(pose);
-
-  pose.header.stamp = start + ros::Duration(1);
-  pose.pose.position.x = 1;
   pose.pose.position.z = 1;
   path.poses.push_back(pose);
 
-  pose.header.stamp = start + ros::Duration(2);
-  pose.pose.position.y = 1;
-  path.poses.push_back(pose);*/
+switch(i)
+{
+    case 0: 
+	pose.header.stamp = start + ros::Duration(1);
+	pose.pose.orientation.w = 0;
+	pose.pose.orientation.z = 1;    
+	path.poses.push_back(pose);
+    break;
 
-  trajectoryFromPath.request.path = turnPathAround();
+    case 1: 
+	pose.header.stamp = start + ros::Duration(1);
+	pose.pose.orientation.w = 1;
+	pose.pose.orientation.z = 0;    
+	path.poses.push_back(pose);
+    break;
+}
+  trajectoryFromPath.request.path = path;
   trajectoryFromPath.request.joint_names.push_back("Base");
 
 	if (trajectoryClient.call(trajectoryFromPath))
@@ -199,17 +142,17 @@ ros::ServiceClient trajectoryClient =
 
   //robotTrajectoryMsg.multi_dof_joint_trajectory = multi;
   displayTrajectory.trajectory.push_back(trajectoryFromPath.response.trajectory);
-  backtrackingPlan.trajectory_ = trajectoryFromPath.response.trajectory;
+  plan.trajectory_ = trajectoryFromPath.response.trajectory;
 
   statePublisher.publish(displayTrajectory);
 
-  ROS_INFO_NAMED("tutorial", "Visualizing backtrackingPlan as a trajectory");
   visual_tools.trigger();
   visual_tools.prompt("next step");
 
-  ROS_INFO_NAMED("tutorial", "Executing backtrackingPlan");
-  move_group.execute(backtrackingPlan);
+  ROS_INFO_NAMED("rotation", "Executing plan");
+  move_group.execute(plan);
 
+}
   visual_tools.trigger();
   visual_tools.prompt("next step");
 

@@ -53,67 +53,16 @@
 #include "trajectory_msgs/MultiDOFJointTrajectoryPoint.h"
 #include "testing/GetRobotTrajectoryFromPath.h"
 
-nav_msgs::Path path;
-
-void pathCallback(const nav_msgs::Path::ConstPtr& msg)
-{
-   path = *msg;
-}
-
-nav_msgs::Path turnPathAround()
-{
-    nav_msgs::Path result;
-
-    int j = path.poses.size()-1;
-
-//ROS_INFO("The path has %d poses.", j);
-    if (j <= 0)
-    {
-	return result;
-    }
-
-        ros::Time lastUsed = path.poses[j].header.stamp - ros::Duration(0.2);
-
-    for (int i = j; i >= 0; i-- )
-    {
-//ROS_INFO("Index had a value of %d.", i);
-        geometry_msgs::PoseStamped pose;
-        pose.pose = path.poses[i].pose;
-	pose.pose.orientation.w = 1;
-	pose.pose.orientation.x = 0;
-	pose.pose.orientation.y = 0;
-	pose.pose.orientation.z = 0;
-
-	if (pose.pose.position.z < 0.9)
-	{
-	    pose.pose.position.z = 0.9;
-	}
-
-	pose.header.stamp = lastUsed + ros::Duration(0.2);
-        lastUsed = lastUsed + ros::Duration(0.2);
-
-        result.poses.push_back(pose);
-    }
-
-    ROS_INFO("The path has %d poses.", (int)result.poses.size());
-
-    return result;
-}
-
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "bebop_backtracker");
+  ros::init(argc, argv, "bebop_boomerang");
   ros::NodeHandle node_handle;
-
-    std::string sourceTopicName;
-    node_handle.param<std::string>("path_to_backtrack_topic", sourceTopicName, "/frodopathy");
 
     if (argc == 2)
     {
     	sourceTopicName = argv[1];
     } 
 
-  ros::Subscriber pathSubscriber = node_handle.subscribe(sourceTopicName, 50, pathCallback);
 
   ros::AsyncSpinner spinner(1);
   spinner.start();
@@ -126,17 +75,10 @@ int main(int argc, char **argv)
   moveit_visual_tools::MoveItVisualTools visual_tools("odom");
   visual_tools.deleteAllMarkers();
 
- // Eigen::Affine3d text_pose = Eigen::Affine3d::Identity();
- // text_pose.translation().z() = 0.75; 
 
-  ROS_INFO_NAMED("backtracker", "Got path with %d points.", (int)path.poses.size());
-
-  ROS_INFO_NAMED("backtracker", "Reference frame: %s", move_group.getPlanningFrame().c_str());
+  ROS_INFO_NAMED("boomerang", "Reference frame: %s", move_group.getPlanningFrame().c_str());
   visual_tools.trigger();
   visual_tools.prompt("next step");
-
-  ROS_INFO_NAMED("backtracker", "Got path with %d points.", (int)path.poses.size());
-  pathSubscriber.shutdown();
   
 
   ros::Publisher statePublisher;
@@ -146,13 +88,12 @@ int main(int argc, char **argv)
   moveit_msgs::DisplayTrajectory displayTrajectory;
   displayTrajectory.model_id = "bebop";
 
-  ROS_INFO_NAMED("backtracker", "Trajectory initialized.");
   moveit_msgs::RobotState robotStateMsg;
   auto currentState = move_group.getCurrentState();  
-ROS_INFO_NAMED("backtracker", "Current robot state aquired.");
   moveit::core::robotStateToRobotStateMsg(*currentState.get(), robotStateMsg);
 
-  ROS_INFO_NAMED("backtracker", "Current robot state converted to message.");
+
+
   backtrackingPlan.start_state_ = robotStateMsg;
   displayTrajectory.trajectory_start = robotStateMsg;
 

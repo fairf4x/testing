@@ -10,13 +10,19 @@ public:
     moveit_msgs::RobotTrajectory robotTrajectoryMsg;
     trajectory_msgs::MultiDOFJointTrajectory multi;
 
+    ROS_INFO("Received call with %d poses.", (int)req.path.poses.size());
+
     multi.header.frame_id = req.path.header.frame_id;
     multi.joint_names = req.joint_names;
 
-    if (req.path.poses.size() > 0)
+    if (req.path.poses.size() <= 0)
     {
-        firstMessageTime = req.path.poses[0].header.stamp;
+	ROS_ERROR("Trajectory from path service recieved invalid input.");
+	return false;
     }
+
+    firstMessageTime = req.path.poses[0].header.stamp;
+
     for(int i = 0; i < req.path.poses.size(); i++)
     {
 	multi.points.push_back(getMultiFromPoseStamped(req.path.poses[i]));

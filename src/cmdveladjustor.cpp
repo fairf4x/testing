@@ -1,8 +1,8 @@
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
-#include "cmdvellimiter.cpp"
-#include "cmdvelcompensator.cpp"
-#include "cmdvelbooster.cpp"
+#include "cmdlimiter.cpp"
+#include "cmdcompensator.cpp"
+#include "cmdbooster.cpp"
 #include <string>
 
 class CmdVelAdjustor
@@ -69,9 +69,9 @@ class CmdVelAdjustor
     ros::Publisher cmdVelPublisher;
     ros::Subscriber cmdVelSubscriber;
 
-    CmdVelLimiter limiter_;
-    CmdVelCompensator compensator_;
-    CmdVelBooster booster_;
+    CmdLimiter limiter_;
+    CmdCompensator compensator_;
+    CmdBooster booster_;
 
     geometry_msgs::Twist actualMessage;
     bool newMessage;
@@ -109,10 +109,10 @@ int main (int argc, char **argv)
     double compensationY;
     double compensationZ;
     double compensationRot;
-    n.param<double>("proclivity_x", compensationX, 0.0);
-    n.param<double>("proclivity_y", compensationY, 0.0);
-    n.param<double>("proclivity_z", compensationZ, 0.0);
-    n.param<double>("proclivity_rot", compensationRot, 0.0);
+    n.param<double>("compensation_x", compensationX, 0.0);
+    n.param<double>("compensation_y", compensationY, 0.0);
+    n.param<double>("compensation_z", compensationZ, 0.0);
+    n.param<double>("compensation_rot", compensationRot, 0.0);
 
     double movementLimit;
     double rotationLimit;
@@ -132,7 +132,7 @@ int main (int argc, char **argv)
 	adjustor.initPublisherAndSubscriber(n, "/cmd_vel_to_compensate", "/compensator/cmd_vel");
     }
 
-    ros::Rate loop_rate(50);
+    ros::Rate loop_rate(20);
 
     while(ros::ok())
     {

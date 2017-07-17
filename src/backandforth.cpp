@@ -58,6 +58,15 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "bebop_back_and_forth");
   ros::NodeHandle node_handle;
 
+  int planVariant;
+  node_handle.param<int>("plan_variant", planVariant, 0);
+
+  if (planVariant < 1 || planVariant > 4)
+  {
+    ROS_INFO("Unknown plan variant. Quitting.");
+    return 0;
+  }
+
   ros::AsyncSpinner spinner(1);
   spinner.start();
 
@@ -84,8 +93,8 @@ int main(int argc, char **argv)
   displayTrajectory.model_id = "bebop";
 
   moveit_msgs::RobotState robotStateMsg;
-  auto currentState = move_group.getCurrentState().get();
-  moveit::core::robotStateToRobotStateMsg(*currentState, robotStateMsg);
+  auto currentState = move_group.getCurrentState();  
+  moveit::core::robotStateToRobotStateMsg(*currentState.get(), robotStateMsg);
 
   plan.start_state_ = robotStateMsg;
   displayTrajectory.trajectory_start = robotStateMsg;
@@ -108,33 +117,107 @@ ros::ServiceClient trajectoryClient =
   pose.pose.position.z = 1;
   path.poses.push_back(pose);
 
+  
+
   for (float i = 0; i <= 3; i += 0.2)
   {
     // x, y = i, -i (4 possibilities)
     pose.header.stamp = start + ros::Duration(i);
-    pose.pose.position.y = i;
+    switch(planVariant)
+    {
+      case 1:
+        pose.pose.position.x = i;
+      break; 
+
+      case 2:
+        pose.pose.position.x = -i;
+      break;
+
+      case 3:
+        pose.pose.position.y = i;
+      break; 
+
+      case 4:
+        pose.pose.position.y = -i;
+      break;
+    }
+    
     path.poses.push_back(pose);
   }
 
   for (float i = 0; i <= 3; i += 0.2)
   {
-    // x, y = 3-i, i-3 (4 possibilities, linked with those above)
+    // x, y = 3-i, i-3 (4 possibilities, (i, 3-i), (-i, i-3), x, y)
     pose.header.stamp = start + ros::Duration(3+i);
-    pose.pose.position.y = 3-i;
+    switch(planVariant)
+    {
+      case 1:
+        pose.pose.position.x = 3-i;
+      break; 
+
+      case 2:
+        pose.pose.position.x = i-3;
+      break;
+
+      case 3:
+        pose.pose.position.y = 3-i;
+      break; 
+
+      case 4:
+        pose.pose.position.y = i-3;
+      break;
+    }
+    
     path.poses.push_back(pose);
   }
 
   for (float i = 0; i <= 3; i += 0.2)
   {
     pose.header.stamp = start + ros::Duration(6+i);
-    pose.pose.position.y = i;
+    switch(planVariant)
+    {
+      case 1:
+        pose.pose.position.x = i;
+      break; 
+
+      case 2:
+        pose.pose.position.x = -i;
+      break;
+
+      case 3:
+        pose.pose.position.y = i;
+      break; 
+
+      case 4:
+        pose.pose.position.y = -i;
+      break;
+    }
+    
     path.poses.push_back(pose);
   }
 
   for (float i = 0; i <= 3; i += 0.2)
   {
     pose.header.stamp = start + ros::Duration(9+i);
-    pose.pose.position.y = 3-i;
+    switch(planVariant)
+    {
+      case 1:
+        pose.pose.position.x = 3-i;
+      break; 
+
+      case 2:
+        pose.pose.position.x = i-3;
+      break;
+
+      case 3:
+        pose.pose.position.y = 3-i;
+      break; 
+
+      case 4:
+        pose.pose.position.y = i-3;
+      break;
+    }
+
     path.poses.push_back(pose);
   }
 

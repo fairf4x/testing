@@ -2,7 +2,7 @@
 #include "geometry_msgs/Twist.h"
 #include <string>
 
-class CmdVelCompensator
+class CmdCompensator
 {
     public:
     double compensateX(double x)
@@ -37,7 +37,7 @@ class CmdVelCompensator
 	return rot;
     }
 
-    CmdVelCompensator(double compX, double compY, double compZ, double compRot) 
+    CmdCompensator(double compX, double compY, double compZ, double compRot) 
     {
 	compensationX = compX;
 	compensationY = compY;

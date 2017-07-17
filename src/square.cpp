@@ -58,6 +58,15 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "bebop_square");
   ros::NodeHandle node_handle;
 
+  int planVariant;
+  node_handle.param<int>("plan_variant", planVariant, 0);
+
+  if (planVariant < 1 || planVariant > 2)
+  {
+    ROS_INFO("Unknown plan variant. Quitting.");
+    return 0;
+  }
+
   ros::AsyncSpinner spinner(1);
   spinner.start();
 
@@ -84,8 +93,8 @@ int main(int argc, char **argv)
   displayTrajectory.model_id = "bebop";
 
   moveit_msgs::RobotState robotStateMsg;
-  auto currentState = move_group.getCurrentState().get();
-  moveit::core::robotStateToRobotStateMsg(*currentState, robotStateMsg);
+  auto currentState = move_group.getCurrentState();  
+  moveit::core::robotStateToRobotStateMsg(*currentState.get(), robotStateMsg);
 
   plan.start_state_ = robotStateMsg;
   displayTrajectory.trajectory_start = robotStateMsg;
@@ -108,31 +117,71 @@ ros::ServiceClient trajectoryClient =
   pose.pose.position.z = 1;
   path.poses.push_back(pose);
 
-  for (float i = 0; i <= 3; i += 0.2)
+  for (float i = 0; i < 3.1; i += 0.2)
   {
     pose.header.stamp = start + ros::Duration(i);
-    pose.pose.position.x = i;
+    switch(planVariant)
+    {
+      case 1:
+        pose.pose.position.x = i;
+      break; 
+
+      case 2:
+        pose.pose.position.x = -i;
+      break;
+    }
+ROS_INFO_NAMED("square", "Pushing [%f, %f, %f]", pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
     path.poses.push_back(pose);
   }
 
-  for (float i = 0; i <= 3; i += 0.2)
+  for (float i = 0; i < 3.1; i += 0.2)
   {
     pose.header.stamp = start + ros::Duration(3+i);
-    pose.pose.position.y = i;
+    switch(planVariant)
+    {
+      case 1:
+        pose.pose.position.y = i;
+      break; 
+
+      case 2:
+        pose.pose.position.y = -i;
+      break;
+    }
+ROS_INFO_NAMED("square", "Pushing [%f, %f, %f]", pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
     path.poses.push_back(pose);
   }
 
-  for (float i = 0; i <= 3; i += 0.2)
+  for (float i = 0; i < 3.1; i += 0.2)
   {
     pose.header.stamp = start + ros::Duration(6+i);
-    pose.pose.position.x = 3-i;
+    switch(planVariant)
+    {
+      case 1:
+        pose.pose.position.x = 3-i;
+      break; 
+
+      case 2:
+        pose.pose.position.x = i-3;
+      break;
+    }
+ROS_INFO_NAMED("square", "Pushing [%f, %f, %f]", pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
     path.poses.push_back(pose);
   }
 
-  for (float i = 0; i <= 3; i += 0.2)
+  for (float i = 0; i < 3.1; i += 0.2)
   {
     pose.header.stamp = start + ros::Duration(9+i);
-    pose.pose.position.y = 3-i;
+    switch(planVariant)
+    {
+      case 1:
+        pose.pose.position.y = 3-i;
+      break; 
+
+      case 2:
+        pose.pose.position.y = i-3;
+      break;
+    }
+ROS_INFO_NAMED("square", "Pushing [%f, %f, %f]", pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
     path.poses.push_back(pose);
   }
 
@@ -156,12 +205,12 @@ ros::ServiceClient trajectoryClient =
 
   statePublisher.publish(displayTrajectory);
 
-  ROS_INFO_NAMED("back_and_forth", "Visualizing plan as a trajectory");
+  ROS_INFO_NAMED("square", "Visualizing plan as a trajectory");
   visual_tools.publishText(text_pose, "Pose Goal", rvt::WHITE, rvt::XLARGE);
   visual_tools.trigger();
   visual_tools.prompt("next step");
 
-  ROS_INFO_NAMED("back_and_forth", "Executing plan");
+  ROS_INFO_NAMED("square", "Executing plan");
   move_group.execute(plan);
 
   visual_tools.trigger();

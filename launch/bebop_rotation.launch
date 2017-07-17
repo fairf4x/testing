@@ -2,7 +2,7 @@
 <launch>
    <param name="plan_variant" value="1" type="int"/>
 
-  <node name="backandforth" pkg="testing" type="backandforth" respawn="false" output="screen">
+  <node name="rotation" pkg="testing" type="rotation" respawn="false" output="screen">
   </node>
 
 <node pkg="testing" type="robottrajectory" name="path_to_trajectory" output="screen"/>
