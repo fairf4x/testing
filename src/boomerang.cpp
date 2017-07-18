@@ -58,101 +58,77 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "bebop_boomerang");
   ros::NodeHandle node_handle;
 
-    if (argc == 2)
-    {
-    	sourceTopicName = argv[1];
-    } 
-
+   std::string planningGroupName;
+    node_handle.param<std::string>("planning_group", planningGroupName, "Bebop");//AndKinect
 
   ros::AsyncSpinner spinner(1);
   spinner.start();
 
-  static const std::string PLANNING_GROUP = "Bebop";//AndKinect
+  static const std::string PLANNING_GROUP = planningGroupName;
 
   moveit::planning_interface::MoveGroupInterface move_group(PLANNING_GROUP);
+
+  const robot_state::JointModelGroup *joint_model_group =
+    move_group.getCurrentState()->getJointModelGroup(PLANNING_GROUP);
+
+  moveit::planning_interface::MoveGroupInterface::Plan my_plan;
 
   namespace rvt = rviz_visual_tools;
   moveit_visual_tools::MoveItVisualTools visual_tools("odom");
   visual_tools.deleteAllMarkers();
 
+  for (int i = 0; i < move_group.getJointNames().size(); i++)
+  {
+    ROS_INFO_NAMED("boomerang", "Joint %s", move_group.getJointNames()[i].c_str());
+  }
+  for (int i = 0; i < move_group.getLinkNames().size(); i++)
+  {
+    ROS_INFO_NAMED("boomerang", "Link %s", move_group.getLinkNames()[i].c_str());
+  }
 
   ROS_INFO_NAMED("boomerang", "Reference frame: %s", move_group.getPlanningFrame().c_str());
   visual_tools.trigger();
   visual_tools.prompt("next step");
   
+  moveit::core::RobotStatePtr current_state = move_group.getCurrentState();
+  
+  move_group.setStartStateToCurrentState();
+  
+  std::vector<double> joint_group_positions;
+  current_state->copyJointGroupPositions(joint_model_group, joint_group_positions);
 
-  ros::Publisher statePublisher;
-  statePublisher = node_handle.advertise<moveit_msgs::DisplayTrajectory>("/move_group/display_planned_path", 1); 
-
-  moveit::planning_interface::MoveGroupInterface::Plan backtrackingPlan;
-  moveit_msgs::DisplayTrajectory displayTrajectory;
-  displayTrajectory.model_id = "bebop";
-
-  moveit_msgs::RobotState robotStateMsg;
-  auto currentState = move_group.getCurrentState();  
-  moveit::core::robotStateToRobotStateMsg(*currentState.get(), robotStateMsg);
-
-
-
-  backtrackingPlan.start_state_ = robotStateMsg;
-  displayTrajectory.trajectory_start = robotStateMsg;
+  joint_group_positions[0] = 0; //x
+  joint_group_positions[1] = 0; //y
+  joint_group_positions[2] = 1; //z
+//  joint_group_positions[3] = 1; //quat w
+//  joint_group_positions[4] = 0; //quat x
+//  joint_group_positions[5] = 0; //quat y
+//  joint_group_positions[6] = 0; //quat z
 
 
-  testing::GetRobotTrajectoryFromPath trajectoryFromPath;
-ros::ServiceClient trajectoryClient = 
-          node_handle.serviceClient<testing::GetRobotTrajectoryFromPath>("get_robot_trajectory_from_path");
-    ROS_INFO("Calling path to robot trajectory service.");
-  ROS_INFO_NAMED("backtracker", "Service registered.");
+  move_group.setJointValueTarget(joint_group_positions);
 
+  bool success = move_group.plan(my_plan);
+  ROS_INFO_NAMED("boomerang", "Visualizing plan %s, got %d states.", success ? "" : "FAILED", (int)my_plan.trajectory_.multi_dof_joint_trajectory.points.size());
 
- /* nav_msgs::Path path;
-  path.header.stamp = ros::Time::now();
-  path.header.frame_id = "odom";
+  for (int i = 0; i < my_plan.trajectory_.multi_dof_joint_trajectory.points.size(); i++)
+  {
+     my_plan.trajectory_.multi_dof_joint_trajectory.points[i].time_from_start = ros::Duration(0.2*i);
+  }
 
-  ros::Time start = ros::Time::now();
-  geometry_msgs::PoseStamped pose;
-  pose.header.stamp = start;
-  pose.pose.orientation.w = 1;
-  path.poses.push_back(pose);
+  visual_tools.publishTrajectoryLine(my_plan.trajectory_, joint_model_group);
 
-  pose.header.stamp = start + ros::Duration(1);
-  pose.pose.position.x = 1;
-  pose.pose.position.z = 1;
-  path.poses.push_back(pose);
-
-  pose.header.stamp = start + ros::Duration(2);
-  pose.pose.position.y = 1;
-  path.poses.push_back(pose);*/
-
-  trajectoryFromPath.request.path = turnPathAround();
-  trajectoryFromPath.request.joint_names.push_back("Base");
-
-	if (trajectoryClient.call(trajectoryFromPath))
-        {
-	    ROS_INFO("Received response.");
-    	}
-    	else
-    	{
-      	    ROS_ERROR("Failed to call service transformation.");
-	    ros::shutdown();
-	    return 1;
-	}
-
-  //robotTrajectoryMsg.multi_dof_joint_trajectory = multi;
-  displayTrajectory.trajectory.push_back(trajectoryFromPath.response.trajectory);
-  backtrackingPlan.trajectory_ = trajectoryFromPath.response.trajectory;
-
-  statePublisher.publish(displayTrajectory);
-
-  ROS_INFO_NAMED("tutorial", "Visualizing backtrackingPlan as a trajectory");
-  visual_tools.trigger();
-  visual_tools.prompt("next step");
-
-  ROS_INFO_NAMED("tutorial", "Executing backtrackingPlan");
-  move_group.execute(backtrackingPlan);
 
   visual_tools.trigger();
   visual_tools.prompt("next step");
+
+
+
+  move_group.execute(my_plan);
+
+  visual_tools.trigger();
+  visual_tools.prompt("next step");
+
 
   ros::shutdown();
   return 0;
