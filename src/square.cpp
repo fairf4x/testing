@@ -127,7 +127,7 @@ ros::ServiceClient trajectoryClient =
       break; 
 
       case 2:
-        pose.pose.position.x = -i;
+        pose.pose.position.y = -i;
       break;
     }
 ROS_INFO_NAMED("square", "Pushing [%f, %f, %f]", pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
@@ -144,7 +144,7 @@ ROS_INFO_NAMED("square", "Pushing [%f, %f, %f]", pose.pose.position.x, pose.pose
       break; 
 
       case 2:
-        pose.pose.position.y = -i;
+        pose.pose.position.x = -i;
       break;
     }
 ROS_INFO_NAMED("square", "Pushing [%f, %f, %f]", pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
@@ -161,7 +161,7 @@ ROS_INFO_NAMED("square", "Pushing [%f, %f, %f]", pose.pose.position.x, pose.pose
       break; 
 
       case 2:
-        pose.pose.position.x = i-3;
+        pose.pose.position.y = i-3;
       break;
     }
 ROS_INFO_NAMED("square", "Pushing [%f, %f, %f]", pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);
@@ -178,7 +178,7 @@ ROS_INFO_NAMED("square", "Pushing [%f, %f, %f]", pose.pose.position.x, pose.pose
       break; 
 
       case 2:
-        pose.pose.position.y = i-3;
+        pose.pose.position.x = i-3;
       break;
     }
 ROS_INFO_NAMED("square", "Pushing [%f, %f, %f]", pose.pose.position.x, pose.pose.position.y, pose.pose.position.z);

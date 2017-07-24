@@ -38,11 +38,11 @@ class Frodopathy
         initPublisher(n, outputTopicName);
     }
 
-    Frodopathy() 
+    Frodopathy(double limit) 
     { 
         newMessage = false;
 	count = 0;
-        treshold = 0.05;
+        treshold = limit;
     }
 
     void publishIfNew()
@@ -106,7 +106,10 @@ int main (int argc, char **argv)
 	argumentsPassed = true;
     } 
 
-    Frodopathy frodo;
+    double frodoLimit;
+    n.param<double>("frodo_limit", frodoLimit, 0.05);
+
+    Frodopathy frodo(frodoLimit);
 
     if(argumentsPassed)
     {

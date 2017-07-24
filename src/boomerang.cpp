@@ -52,6 +52,8 @@
 #include "trajectory_msgs/MultiDOFJointTrajectory.h"
 #include "trajectory_msgs/MultiDOFJointTrajectoryPoint.h"
 #include "testing/GetRobotTrajectoryFromPath.h"
+#include "trajectory_msgs/MultiDOFJointTrajectory.h"
+#include "trajectory_msgs/MultiDOFJointTrajectoryPoint.h"
 
 int main(int argc, char **argv)
 {
@@ -87,6 +89,10 @@ int main(int argc, char **argv)
   }
 
   ROS_INFO_NAMED("boomerang", "Reference frame: %s", move_group.getPlanningFrame().c_str());
+
+  move_group.setPlanningTime(2);
+  move_group.setWorkspace(-10, -10, 0.7, 10, 10, 1.7);
+
   visual_tools.trigger();
   visual_tools.prompt("next step");
   
@@ -110,6 +116,34 @@ int main(int argc, char **argv)
 
   bool success = move_group.plan(my_plan);
   ROS_INFO_NAMED("boomerang", "Visualizing plan %s, got %d states.", success ? "" : "FAILED", (int)my_plan.trajectory_.multi_dof_joint_trajectory.points.size());
+
+/*  trajectory_msgs::MultiDOFJointTrajectoryPoint first_point;
+  geometry_msgs::Transform transform;
+  transform.translation.x = my_plan.trajectory_.multi_dof_joint_trajectory.points[0].transforms[0].translation.x;
+  transform.translation.y = my_plan.trajectory_.multi_dof_joint_trajectory.points[0].transforms[0].translation.y;
+  transform.translation.z = my_plan.trajectory_.multi_dof_joint_trajectory.points[0].transforms[0].translation.z;
+  transform.rotation.x = 0;
+  transform.rotation.y = 0;
+  transform.rotation.z = 0;
+  transform.rotation.w = 1;
+  first_point.transforms.push_back(transform);
+
+  my_plan.trajectory_.multi_dof_joint_trajectory.points.insert(my_plan.trajectory_.multi_dof_joint_trajectory.points.begin(), first_point); 
+
+  int size = my_plan.trajectory_.multi_dof_joint_trajectory.points.size()-1;
+
+  trajectory_msgs::MultiDOFJointTrajectoryPoint last_point;
+  geometry_msgs::Transform transform2;
+  transform2.translation.x = my_plan.trajectory_.multi_dof_joint_trajectory.points[size].transforms[0].translation.x;
+  transform2.translation.y = my_plan.trajectory_.multi_dof_joint_trajectory.points[size].transforms[0].translation.y;
+  transform2.translation.z = my_plan.trajectory_.multi_dof_joint_trajectory.points[size].transforms[0].translation.z;
+  transform2.rotation.x = 0;
+  transform2.rotation.y = 0;
+  transform2.rotation.z = 0;
+  transform2.rotation.w = 1;
+  last_point.transforms.push_back(transform2);
+
+  my_plan.trajectory_.multi_dof_joint_trajectory.points.push_back(last_point); */
 
   for (int i = 0; i < my_plan.trajectory_.multi_dof_joint_trajectory.points.size(); i++)
   {

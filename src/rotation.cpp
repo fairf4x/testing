@@ -110,22 +110,11 @@ ros::ServiceClient trajectoryClient =
   pose.pose.position.z = 1;
   path.poses.push_back(pose);
 
-switch(i)
-{
-    case 0: 
 	pose.header.stamp = start + ros::Duration(1);
 	pose.pose.orientation.w = 0;
 	pose.pose.orientation.z = 1;    
 	path.poses.push_back(pose);
-    break;
 
-    case 1: 
-	pose.header.stamp = start + ros::Duration(1);
-	pose.pose.orientation.w = 1;
-	pose.pose.orientation.z = 0;    
-	path.poses.push_back(pose);
-    break;
-}
   trajectoryFromPath.request.path = path;
   trajectoryFromPath.request.joint_names.push_back("Base");
 

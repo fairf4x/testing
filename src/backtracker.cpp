@@ -79,10 +79,10 @@ nav_msgs::Path turnPathAround()
 //ROS_INFO("Index had a value of %d.", i);
         geometry_msgs::PoseStamped pose;
         pose.pose = path.poses[i].pose;
-	pose.pose.orientation.w = 1;
-	pose.pose.orientation.x = 0;
-	pose.pose.orientation.y = 0;
-	pose.pose.orientation.z = 0;
+	//pose.pose.orientation.w = 1;
+	//pose.pose.orientation.x = 0;
+	//pose.pose.orientation.y = 0;
+	//pose.pose.orientation.z = 0;
 
 	if (pose.pose.position.z < 0.9)
 	{
